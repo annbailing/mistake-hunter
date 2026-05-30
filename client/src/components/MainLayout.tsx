@@ -136,8 +136,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
             collapsed && 'justify-center'
           )}
         >
-          <div className="avatar-bubble h-8 w-8">
-            {user?.nickname?.charAt(0) || 'U'}
+          <div className="avatar-bubble h-8 w-8 overflow-hidden">
+            {user?.avatarUrl ? (
+              <img src={user.avatarUrl} alt="avatar" className="w-full h-full rounded-full object-cover" />
+            ) : (
+              user?.nickname?.charAt(0) || 'U'
+            )}
           </div>
           {!collapsed && (
             <div className="flex-1 min-w-0">
@@ -236,8 +240,12 @@ export default function MainLayout({ children }: { children: React.ReactNode }) 
                 onClick={() => setUserMenuOpen(!userMenuOpen)}
                 className="flex items-center gap-2 px-2 py-1.5 rounded-full hover:bg-white/50 dark:hover:bg-white/6 transition-colors"
               >
-                <div className="avatar-bubble w-8 h-8">
-                  {user?.nickname?.[0] || 'U'}
+                <div className="avatar-bubble w-8 h-8 overflow-hidden">
+                  {user?.avatarUrl ? (
+                    <img src={user.avatarUrl} alt="avatar" className="w-full h-full rounded-full object-cover" />
+                  ) : (
+                    user?.nickname?.[0] || 'U'
+                  )}
                 </div>
                 <span className="text-sm font-normal hidden md:block text-slate-700 dark:text-slate-300">
                   {user?.nickname}
