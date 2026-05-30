@@ -1,7 +1,5 @@
-import { PrismaClient } from "@prisma/client";
 import { aiService } from "../utils/ai";
-
-const prisma = new PrismaClient();
+import { prisma } from "../config/database";
 
 interface CreateMistakeData {
   subjectId: string;

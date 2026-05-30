@@ -1,9 +1,7 @@
-import { PrismaClient } from "@prisma/client";
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { config } from "../config";
-
-const prisma = new PrismaClient();
+import { prisma } from "../config/database";
 
 const presetSubjects = [
   { name: "语文", icon: "📖", sortOrder: 1 },
