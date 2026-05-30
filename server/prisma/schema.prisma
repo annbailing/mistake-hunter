@@ -1,0 +1,191 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id          String    @id @default(uuid())
+  phone       String    @unique
+  password    String
+  nickname    String
+  avatarUrl   String?   @map("avatar_url")
+  gradeLevel  String    @map("grade_level")
+  grade       String?
+  createdAt   DateTime  @default(now()) @map("created_at")
+  updatedAt   DateTime  @updatedAt @map("updated_at")
+
+  subjects          Subject[]
+  tags              Tag[]
+  mistakes          Mistake[]
+  variantAnswers    VariantAnswer[]
+  reviewSchedules   ReviewSchedule[]
+
+  @@map("users")
+}
+
+model Subject {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  name      String
+  icon      String?
+  sortOrder Int      @default(0) @map("sort_order")
+  isPreset  Boolean  @default(false) @map("is_preset")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  chapters Chapter[]
+  mistakes Mistake[]
+
+  @@map("subjects")
+}
+
+model Chapter {
+  id        String   @id @default(uuid())
+  subjectId String   @map("subject_id")
+  parentId  String?  @map("parent_id")
+  name      String
+  level     Int      @default(1)
+  sortOrder Int      @default(0) @map("sort_order")
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  subject  Subject   @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  parent   Chapter?  @relation("ChapterTree", fields: [parentId], references: [id], onDelete: SetNull)
+  children Chapter[] @relation("ChapterTree")
+  mistakes Mistake[]
+
+  @@map("chapters")
+}
+
+model Tag {
+  id        String   @id @default(uuid())
+  userId    String   @map("user_id")
+  name      String
+  color     String?
+  createdAt DateTime @default(now()) @map("created_at")
+
+  user          User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mistakeTags   MistakeTag[]
+
+  @@map("tags")
+}
+
+model Mistake {
+  id            String   @id @default(uuid())
+  userId        String   @map("user_id")
+  subjectId     String   @map("subject_id")
+  chapterId     String?  @map("chapter_id")
+  title         String
+  content       String
+  myAnswer      String?  @map("my_answer")
+  correctAnswer String?  @map("correct_answer")
+  source        String?
+  sourceDate    DateTime? @map("source_date")
+  errorType     String?  @map("error_type")
+  masteryStatus String   @default("unmastered") @map("mastery_status")
+  masteredAt    DateTime? @map("mastered_at")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  subject  Subject  @relation(fields: [subjectId], references: [id], onDelete: Cascade)
+  chapter  Chapter? @relation(fields: [chapterId], references: [id], onDelete: SetNull)
+
+  images          MistakeImage[]
+  mistakeTags     MistakeTag[]
+  aiAnalysis      AiAnalysis?
+  variantQuestions VariantQuestion[]
+  reviewSchedules ReviewSchedule[]
+
+  @@map("mistakes")
+}
+
+model MistakeImage {
+  id            String   @id @default(uuid())
+  mistakeId     String   @map("mistake_id")
+  filePath      String   @map("file_path")
+  thumbnailPath String?  @map("thumbnail_path")
+  ocrText       String?  @map("ocr_text")
+  sortOrder     Int      @default(0) @map("sort_order")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  mistake Mistake @relation(fields: [mistakeId], references: [id], onDelete: Cascade)
+
+  @@map("mistake_images")
+}
+
+model MistakeTag {
+  mistakeId String @map("mistake_id")
+  tagId     String @map("tag_id")
+
+  mistake Mistake @relation(fields: [mistakeId], references: [id], onDelete: Cascade)
+  tag     Tag     @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([mistakeId, tagId])
+  @@map("mistake_tags")
+}
+
+model AiAnalysis {
+  id         String   @id @default(uuid())
+  mistakeId  String   @unique @map("mistake_id")
+  errorType  String?  @map("error_type")
+  analysis   String?
+  suggestion String?
+  modelUsed  String?  @map("model_used")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  mistake Mistake @relation(fields: [mistakeId], references: [id], onDelete: Cascade)
+
+  @@map("ai_analyses")
+}
+
+model VariantQuestion {
+  id         String   @id @default(uuid())
+  mistakeId  String   @map("mistake_id")
+  content    String
+  answer     String
+  difficulty Int      @default(3)
+  sortOrder  Int      @default(0) @map("sort_order")
+  createdAt  DateTime @default(now()) @map("created_at")
+
+  mistake        Mistake         @relation(fields: [mistakeId], references: [id], onDelete: Cascade)
+  variantAnswers VariantAnswer[]
+
+  @@map("variant_questions")
+}
+
+model VariantAnswer {
+  id         String   @id @default(uuid())
+  userId     String   @map("user_id")
+  variantId  String   @map("variant_id")
+  myAnswer   String   @map("my_answer")
+  isCorrect  Boolean  @map("is_correct")
+  answeredAt DateTime @default(now()) @map("answered_at")
+
+  user    User            @relation(fields: [userId], references: [id], onDelete: Cascade)
+  variant VariantQuestion @relation(fields: [variantId], references: [id], onDelete: Cascade)
+
+  @@map("variant_answers")
+}
+
+model ReviewSchedule {
+  id          String    @id @default(uuid())
+  userId      String    @map("user_id")
+  mistakeId   String    @map("mistake_id")
+  reviewDate  DateTime  @map("review_date")
+  reviewRound Int       @default(1) @map("review_round")
+  status      String    @default("pending")
+  feedback    String?
+  completedAt DateTime? @map("completed_at")
+  createdAt   DateTime  @default(now()) @map("created_at")
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  mistake Mistake @relation(fields: [mistakeId], references: [id], onDelete: Cascade)
+
+  @@map("review_schedules")
+}

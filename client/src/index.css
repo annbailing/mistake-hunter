@@ -1,0 +1,195 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --brand-gradient: linear-gradient(135deg, #22d3ee 0%, #6366f1 50%, #d946ef 100%);
+    --brand-glow: rgba(168, 85, 247, 0.35);
+    --bubble-bg: rgba(255, 255, 255, 0.1);
+    --bubble-bg-focus: rgba(255, 255, 255, 0.16);
+    --bubble-border: rgba(255, 255, 255, 0.42);
+    --bubble-highlight: rgba(255, 255, 255, 0.72);
+    --bubble-panel-bg: rgba(255, 255, 255, 0.06);
+  }
+
+  body {
+    @apply bg-slate-50 text-gray-900 dark:bg-slate-950 dark:text-gray-100 antialiased;
+  }
+
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-transparent;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-gray-300 dark:bg-slate-700 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-gray-400 dark:bg-slate-600;
+  }
+}
+
+@layer components {
+  /* ── 登录页气泡风格 ── */
+  .bubble-panel {
+    @apply rounded-[2rem] p-8;
+    background: var(--bubble-panel-bg);
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    box-shadow:
+      inset 0 2px 4px var(--bubble-highlight),
+      inset 0 -3px 8px rgba(255, 255, 255, 0.04),
+      inset 12px 0 20px rgba(255, 255, 255, 0.06),
+      0 8px 32px rgba(0, 0, 0, 0.12),
+      0 0 0 0.5px rgba(255, 255, 255, 0.15);
+  }
+
+  .bubble-input {
+    @apply w-full px-5 py-3.5 text-sm outline-none transition-all duration-300;
+    border-radius: 9999px;
+    background: var(--bubble-bg);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+    border: 1px solid var(--bubble-border);
+    color: rgba(255, 255, 255, 0.95);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.35);
+    box-shadow:
+      inset 0 2px 3px var(--bubble-highlight),
+      inset 0 -2px 6px rgba(255, 255, 255, 0.05),
+      inset 8px 0 12px rgba(255, 255, 255, 0.08),
+      0 4px 16px rgba(0, 0, 0, 0.1),
+      0 0 20px rgba(255, 255, 255, 0.04);
+  }
+
+  .bubble-input::placeholder {
+    color: rgba(255, 255, 255, 0.5);
+    text-shadow: none;
+  }
+
+  .bubble-input-focused,
+  .bubble-input:focus {
+    background: var(--bubble-bg-focus);
+    border-color: rgba(255, 255, 255, 0.58);
+    box-shadow:
+      inset 0 2px 4px rgba(255, 255, 255, 0.85),
+      inset 0 -2px 6px rgba(255, 255, 255, 0.08),
+      inset 8px 0 14px rgba(255, 255, 255, 0.12),
+      0 4px 20px rgba(0, 0, 0, 0.12),
+      0 0 24px rgba(255, 255, 255, 0.12);
+  }
+
+  .bubble-input:hover:not(:focus) {
+    border-color: rgba(255, 255, 255, 0.5);
+    background: rgba(255, 255, 255, 0.12);
+  }
+
+  .bubble-select {
+    @apply appearance-none cursor-pointer;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%23ffffff'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M19 9l-7 7-7-7'%3E%3C/path%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 1.25rem center;
+    background-size: 1rem;
+    padding-right: 2.75rem;
+  }
+
+  .bubble-btn-primary {
+    @apply inline-flex items-center justify-center gap-2 py-3.5 font-medium rounded-full text-sm transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed;
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.38) 0%,
+      rgba(255, 255, 255, 0.16) 100%
+    );
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    color: rgba(255, 255, 255, 0.98);
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.3);
+    box-shadow:
+      inset 0 2px 3px rgba(255, 255, 255, 0.75),
+      inset 0 -2px 4px rgba(255, 255, 255, 0.06),
+      0 6px 24px rgba(0, 0, 0, 0.15);
+  }
+
+  .bubble-btn-primary:hover:not(:disabled) {
+    background: linear-gradient(
+      180deg,
+      rgba(255, 255, 255, 0.48) 0%,
+      rgba(255, 255, 255, 0.22) 100%
+    );
+    transform: translateY(-1px);
+    box-shadow:
+      inset 0 2px 4px rgba(255, 255, 255, 0.85),
+      0 8px 28px rgba(0, 0, 0, 0.18);
+  }
+
+  .bubble-btn-primary:active:not(:disabled) {
+    transform: translateY(0);
+  }
+
+  .bubble-btn-icon {
+    @apply inline-flex items-center justify-center rounded-full text-white/75 hover:text-white transition-all duration-200;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(4px);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    padding: 0.5rem;
+    box-shadow:
+      inset 0 1px 2px rgba(255, 255, 255, 0.5),
+      0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+
+  .bubble-btn-icon:hover {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.48);
+  }
+
+  /* ── 主应用（不透明，同色系） ── */
+  .btn-primary {
+    @apply inline-flex items-center justify-center px-4 py-2 text-white text-sm font-semibold rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed;
+    background: var(--brand-gradient);
+    box-shadow: 0 2px 12px var(--brand-glow);
+  }
+
+  .btn-primary:hover:not(:disabled) {
+    box-shadow: 0 4px 18px rgba(168, 85, 247, 0.4);
+    transform: translateY(-1px);
+  }
+
+  .btn-secondary {
+    @apply inline-flex items-center justify-center px-4 py-2 bg-white dark:bg-slate-800 border border-gray-200 dark:border-slate-700 text-gray-700 dark:text-gray-300 text-sm font-medium rounded-xl hover:bg-gray-50 dark:hover:bg-slate-700 transition-colors;
+  }
+
+  .card {
+    @apply bg-white dark:bg-slate-900 rounded-2xl border border-gray-100 dark:border-slate-800;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04), 0 4px 16px rgba(99, 102, 241, 0.04);
+  }
+
+  .dark .card {
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2), 0 4px 16px rgba(99, 102, 241, 0.08);
+  }
+
+  .input {
+    @apply w-full px-4 py-2.5 border border-gray-200 dark:border-slate-700 rounded-xl bg-white dark:bg-slate-800 text-gray-900 dark:text-gray-100 placeholder:text-gray-400 dark:placeholder:text-slate-500 outline-none transition-all text-sm;
+  }
+
+  .input:focus {
+    border-color: rgba(99, 102, 241, 0.5);
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.12);
+  }
+
+  .brand-logo {
+    @apply rounded-xl flex items-center justify-center;
+    background: var(--brand-gradient);
+    box-shadow: 0 4px 16px var(--brand-glow);
+  }
+
+  .brand-gradient-text {
+    @apply bg-clip-text text-transparent;
+    background-image: var(--brand-gradient);
+  }
+}

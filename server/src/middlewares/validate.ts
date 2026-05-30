@@ -1,0 +1,24 @@
+import { Request, Response, NextFunction } from "express";
+import { validationResult } from "express-validator";
+
+export function validate(
+  req: Request,
+  res: Response,
+  next: NextFunction
+): void {
+  const errors = validationResult(req);
+
+  if (!errors.isEmpty()) {
+    res.status(400).json({
+      success: false,
+      error: "参数校验失败",
+      details: errors.array().map((e: any) => ({
+        field: e.path,
+        message: e.msg,
+      })),
+    });
+    return;
+  }
+
+  next();
+}

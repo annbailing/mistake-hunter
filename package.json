@@ -1,0 +1,17 @@
+{
+  "name": "mistake-hunter",
+  "version": "1.0.0",
+  "description": "AI驱动的智能错题管理系统",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently \"npm run dev:server\"",
+    "dev:server": "cd server && npm run dev",
+    "build": "cd server && npm run build",
+    "prisma:generate": "cd server && npm run prisma:generate",
+    "prisma:migrate": "cd server && npm run prisma:migrate",
+    "prisma:seed": "cd server && npm run prisma:seed"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
