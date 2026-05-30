@@ -7,6 +7,7 @@ import type { Mistake, Subject } from '../types'
 import { SkeletonCard } from '../components/ui/Loading'
 import EmptyState from '../components/ui/EmptyState'
 import Pagination from '../components/ui/Pagination'
+import { unwrapList } from '../utils/apiHelpers'
 import clsx from 'clsx'
 import dayjs from 'dayjs'
 import toast from 'react-hot-toast'
@@ -19,12 +20,13 @@ export default function MistakeListPage() {
   const [totalPages, setTotalPages] = useState(0)
   const [loading, setLoading] = useState(true)
   const [selected, setSelected] = useState<string[]>([])
-  const [keyword, setKeyword] = useState(searchParams.get('keyword') || '')
 
   const page = Number(searchParams.get('page') || 1)
   const subjectId = searchParams.get('subjectId') || ''
   const errorType = searchParams.get('errorType') || ''
   const masteryStatus = searchParams.get('masteryStatus') || ''
+  const keyword = searchParams.get('keyword') || ''
+  const [searchInput, setSearchInput] = useState(keyword)
   const limit = 12
 
   const fetchMistakes = async () => {
@@ -36,9 +38,10 @@ export default function MistakeListPage() {
       if (masteryStatus) params.masteryStatus = masteryStatus
       if (keyword) params.keyword = keyword
       const res = await mistakeApi.getList(params)
-      setMistakes(res.data.data.list || [])
-      setTotal(res.data.data.pagination?.total || 0)
-      setTotalPages(res.data.data.pagination?.totalPages || 0)
+      const { items, total: t, totalPages: tp } = unwrapList<Mistake>(res)
+      setMistakes(items)
+      setTotal(t)
+      setTotalPages(tp)
     } catch {
     } finally {
       setLoading(false)
@@ -47,7 +50,11 @@ export default function MistakeListPage() {
 
   useEffect(() => {
     fetchMistakes()
-  }, [page, subjectId, errorType, masteryStatus])
+  }, [page, subjectId, errorType, masteryStatus, keyword])
+
+  useEffect(() => {
+    setSearchInput(keyword)
+  }, [keyword])
 
   useEffect(() => {
     subjectApi.getAll().then((r) => setSubjects(r.data.data || [])).catch(() => {})
@@ -62,7 +69,7 @@ export default function MistakeListPage() {
   }
 
   const handleSearch = () => {
-    updateParams('keyword', keyword)
+    updateParams('keyword', searchInput)
   }
 
   const handleBatchDelete = async () => {
@@ -111,8 +118,8 @@ export default function MistakeListPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
             <input
               type="text"
-              value={keyword}
-              onChange={(e) => setKeyword(e.target.value)}
+              value={searchInput}
+              onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               placeholder="搜索错题标题或内容..."
               className="input pl-9"

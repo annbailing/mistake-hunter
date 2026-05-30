@@ -2,6 +2,7 @@ import { Suspense, lazy } from 'react'
 import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuthStore } from './stores/authStore'
 import MainLayout from './components/MainLayout'
+import ErrorBoundary from './components/ErrorBoundary'
 import Loading from './components/ui/Loading'
 
 const LoginPage = lazy(() => import('./pages/LoginPage'))
@@ -30,15 +31,16 @@ function SuspenseWrapper({ children }: { children: React.ReactNode }) {
 export default function App() {
   return (
     <Routes>
-      <Route path="/login" element={<SuspenseWrapper><LoginPage /></SuspenseWrapper>} />
-      <Route path="/register" element={<SuspenseWrapper><RegisterPage /></SuspenseWrapper>} />
+      <Route path="/login" element={<ErrorBoundary><SuspenseWrapper><LoginPage /></SuspenseWrapper></ErrorBoundary>} />
+      <Route path="/register" element={<ErrorBoundary><SuspenseWrapper><RegisterPage /></SuspenseWrapper></ErrorBoundary>} />
       <Route
         path="/*"
         element={
           <ProtectedRoute>
             <MainLayout>
-              <SuspenseWrapper>
-                <Routes>
+              <ErrorBoundary>
+                <SuspenseWrapper>
+                  <Routes>
                   <Route path="/" element={<DashboardPage />} />
                   <Route path="/mistakes" element={<MistakeListPage />} />
                   <Route path="/mistakes/new" element={<MistakeCreatePage />} />
@@ -52,6 +54,7 @@ export default function App() {
                   <Route path="*" element={<Navigate to="/" replace />} />
                 </Routes>
               </SuspenseWrapper>
+              </ErrorBoundary>
             </MainLayout>
           </ProtectedRoute>
         }

@@ -1,6 +1,7 @@
 
 import { config } from "../config";
 import logger from "./logger";
+import { extractJson } from "./jsonExtractor";
 
 interface AIMessage {
   role: "system" | "user" | "assistant";
@@ -147,24 +148,12 @@ ${correctAnswer ? `正确答案：${correctAnswer}` : ""}
     ];
 
     const result = await this.callAPI(messages);
-
-    try {
-      const parsed = JSON.parse(result);
-      return {
-        error_type: parsed.error_type || "concept",
-        analysis: parsed.analysis || "",
-        suggestion: parsed.suggestion || "",
-      };
-    } catch {
-      const errorTypeMatch = result.match(/"error_type"\s*:\s*"(\w+)"/);
-      const analysisMatch = result.match(/"analysis"\s*:\s*"([^"]+)"/);
-      const suggestionMatch = result.match(/"suggestion"\s*:\s*"([^"]+)"/);
-      return {
-        error_type: errorTypeMatch?.[1] || "concept",
-        analysis: analysisMatch?.[1] || result,
-        suggestion: suggestionMatch?.[1] || "",
-      };
-    }
+    const parsed = extractJson<{ error_type?: string; analysis?: string; suggestion?: string }>(result);
+    return {
+      error_type: parsed.error_type || "concept",
+      analysis: parsed.analysis || "",
+      suggestion: parsed.suggestion || "",
+    };
   }
 
   async generateVariants(
@@ -200,20 +189,15 @@ ${correctAnswer ? `正确答案：${correctAnswer}` : ""}
     ];
 
     const result = await this.callAPI(messages);
-
-    try {
-      const parsed = JSON.parse(result);
-      if (Array.isArray(parsed)) {
-        return parsed.map((item: any, index: number) => ({
-          content: item.content || "",
-          answer: item.answer || "",
-          difficulty: Math.min(5, Math.max(1, parseInt(item.difficulty) || 3)),
-        }));
-      }
-      return [];
-    } catch {
-      return [];
+    const parsed = extractJson<Array<{ content?: string; answer?: string; difficulty?: number }>>(result);
+    if (Array.isArray(parsed)) {
+      return parsed.map((item) => ({
+        content: item.content || "",
+        answer: item.answer || "",
+        difficulty: Math.min(5, Math.max(1, Math.round(item.difficulty || 3))),
+      }));
     }
+    return [];
   }
 
   async judgeAnswer(
@@ -238,13 +222,8 @@ ${correctAnswer ? `正确答案：${correctAnswer}` : ""}
     ];
 
     const result = await this.callAPI(messages);
-
-    try {
-      const parsed = JSON.parse(result);
-      return !!parsed.is_correct;
-    } catch {
-      return result.toLowerCase().includes("true");
-    }
+    const parsed = extractJson<{ is_correct?: boolean }>(result);
+    return !!parsed.is_correct;
   }
 }
 
