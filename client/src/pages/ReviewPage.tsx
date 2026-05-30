@@ -108,7 +108,7 @@ export default function ReviewPage() {
   return (
     <div className="max-w-3xl mx-auto space-y-6">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <h1 className="page-title">
           今日复习
         </h1>
         <span className="text-sm text-gray-500 dark:text-gray-400 bg-gray-100 dark:bg-gray-800 px-3 py-1 rounded-full">
@@ -123,13 +123,13 @@ export default function ReviewPage() {
         />
       </div>
 
-      <div className="card p-6 space-y-5">
+      <div className="content-card space-y-5">
         <div className="flex items-center gap-2 text-sm">
           <span className="text-base">{current.mistake.subject?.icon}</span>
-          <span className="text-gray-600 dark:text-gray-400">
+          <span className="text-slate-600 dark:text-slate-400">
             {current.mistake.subject?.name}
           </span>
-          <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-0.5 rounded-full">
+          <span className="text-xs text-slate-400 dark:text-slate-500 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-full">
             第 {current.reviewRound} 轮复习
           </span>
           {current.mistake.errorType && ERROR_TYPE_MAP[current.mistake.errorType] && (
@@ -145,17 +145,17 @@ export default function ReviewPage() {
         </div>
 
         <div className="prose dark:prose-invert max-w-none">
-          <p className="text-gray-900 dark:text-gray-100 whitespace-pre-wrap leading-relaxed">
+          <p className="content-text whitespace-pre-wrap">
             {current.mistake.content}
           </p>
         </div>
 
         {current.mistake.myAnswer && (
-          <div className="p-4 bg-danger-50 dark:bg-danger-900/10 rounded-lg border border-danger-200 dark:border-danger-800">
-            <p className="text-xs font-medium text-danger-600 dark:text-danger-400 mb-2">
+          <div className="answer-wrong !p-4">
+            <p className="content-label text-danger-600 dark:text-danger-400 !mb-2">
               当时我的答案：
             </p>
-            <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap">
+            <p className="content-text whitespace-pre-wrap">
               {current.mistake.myAnswer}
             </p>
           </div>
@@ -163,11 +163,11 @@ export default function ReviewPage() {
 
         {showAnswer ? (
           <div className="space-y-4">
-            <div className="p-4 bg-success-50 dark:bg-success-900/10 rounded-lg border border-success-200 dark:border-success-800">
-              <p className="text-xs font-medium text-success-600 dark:text-success-400 mb-2">
+            <div className="answer-correct !p-4">
+              <p className="content-label text-success-600 dark:text-success-400 !mb-2">
                 正确答案：
               </p>
-              <p className="text-sm text-gray-800 dark:text-gray-200 whitespace-pre-wrap leading-relaxed">
+              <p className="content-text whitespace-pre-wrap">
                 {current.mistake.correctAnswer}
               </p>
             </div>
@@ -212,7 +212,7 @@ export default function ReviewPage() {
         ) : (
           <button
             onClick={() => setShowAnswer(true)}
-            className="w-full py-3.5 bg-primary-600 hover:bg-primary-700 text-white rounded-xl font-medium text-sm transition-colors shadow-sm"
+            className="btn-primary w-full py-3.5"
           >
             显示答案
           </button>

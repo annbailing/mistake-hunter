@@ -173,40 +173,40 @@ export default function MistakeDetailPage() {
         </div>
       </div>
 
-      <div className="card p-6">
-        <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 mb-3 flex items-center gap-2">
+      <div className="content-card">
+        <h2 className="content-label">
           <BookOpen className="h-4 w-4" />
           题目内容
         </h2>
         <div
-          className="prose dark:prose-invert max-w-none text-sm whitespace-pre-wrap leading-relaxed"
+          className="content-text prose dark:prose-invert max-w-none whitespace-pre-wrap"
           dangerouslySetInnerHTML={{ __html: renderLatex(mistake.content) }}
         />
       </div>
 
       {mistake.myAnswer && (
-        <div className="rounded-xl p-6 border-2 border-danger-200 dark:border-danger-800 bg-danger-50/50 dark:bg-danger-900/10">
-          <h2 className="text-sm font-medium text-danger-600 dark:text-danger-400 mb-3">
+        <div className="answer-wrong">
+          <h2 className="content-label text-danger-600 dark:text-danger-400">
             我的答案
           </h2>
-          <p className="text-sm whitespace-pre-wrap text-gray-800 dark:text-gray-200 leading-relaxed">
+          <p className="content-text whitespace-pre-wrap">
             {mistake.myAnswer}
           </p>
         </div>
       )}
 
       {mistake.correctAnswer && (
-        <div className="rounded-xl p-6 border-2 border-success-200 dark:border-success-800 bg-success-50/50 dark:bg-success-900/10">
-          <h2 className="text-sm font-medium text-success-600 dark:text-success-400 mb-3">
+        <div className="answer-correct">
+          <h2 className="content-label text-success-600 dark:text-success-400">
             正确答案
           </h2>
-          <p className="text-sm whitespace-pre-wrap text-gray-800 dark:text-gray-200 leading-relaxed">
+          <p className="content-text whitespace-pre-wrap">
             {mistake.correctAnswer}
           </p>
         </div>
       )}
 
-      <div className="card p-6">
+      <div className="content-card">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-sm font-medium text-gray-500 dark:text-gray-400 flex items-center gap-2">
             <Sparkles className="h-4 w-4" />
@@ -247,15 +247,15 @@ export default function MistakeDetailPage() {
                 </span>
               )}
             </div>
-            <div className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+            <div className="content-text whitespace-pre-wrap">
               {mistake.aiAnalysis.analysis}
             </div>
             {mistake.aiAnalysis.suggestion && (
-              <div className="p-4 bg-primary-50 dark:bg-primary-900/10 rounded-lg border border-primary-200 dark:border-primary-800">
-                <p className="text-xs font-medium text-primary-600 dark:text-primary-400 mb-2">
+              <div className="p-4 rounded-2xl border border-indigo-200/60 dark:border-indigo-500/30 bg-indigo-50 dark:bg-indigo-950/40">
+                <p className="text-xs font-medium text-indigo-600 dark:text-indigo-400 mb-2">
                   改进建议
                 </p>
-                <p className="text-sm text-gray-700 dark:text-gray-300 leading-relaxed">
+                <p className="content-text">
                   {mistake.aiAnalysis.suggestion}
                 </p>
               </div>
@@ -291,9 +291,9 @@ export default function MistakeDetailPage() {
             {mistake.variantQuestions.map((v: any, i: number) => (
               <div
                 key={v.id}
-                className="p-4 bg-gray-50 dark:bg-gray-800/50 rounded-lg border border-gray-200 dark:border-gray-700"
+                className="content-card !p-4"
               >
-                <p className="text-sm font-medium text-gray-900 dark:text-gray-100 mb-3">
+                <p className="content-text font-medium mb-3">
                   {i + 1}. {v.content}
                 </p>
                 <button
@@ -313,7 +313,7 @@ export default function MistakeDetailPage() {
                   )}
                 </button>
                 {showVariants[v.id] && (
-                  <div className="mt-3 p-3 bg-white dark:bg-gray-900 rounded-lg text-sm whitespace-pre-wrap text-gray-700 dark:text-gray-300 border border-gray-200 dark:border-gray-700">
+                  <div className="mt-3 content-card !p-4 content-text whitespace-pre-wrap">
                     {v.answer}
                   </div>
                 )}

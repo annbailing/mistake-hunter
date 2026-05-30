@@ -93,7 +93,7 @@ export default function MistakeListPage() {
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-bold text-gray-900 dark:text-white">
+        <h1 className="page-title">
           错题管理
         </h1>
         <Link
@@ -115,14 +115,14 @@ export default function MistakeListPage() {
               onChange={(e) => setKeyword(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
               placeholder="搜索错题标题或内容..."
-              className="pl-9 pr-4 py-2 w-full border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 placeholder:text-gray-400 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none transition-colors"
+              className="input pl-9"
             />
           </div>
 
           <select
             value={subjectId}
             onChange={(e) => updateParams('subjectId', e.target.value)}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
+            className="select"
           >
             <option value="">全部科目</option>
             {subjects.map((s) => (
@@ -135,7 +135,7 @@ export default function MistakeListPage() {
           <select
             value={errorType}
             onChange={(e) => updateParams('errorType', e.target.value)}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
+            className="select"
           >
             <option value="">全部错因</option>
             {Object.entries(ERROR_TYPE_MAP).map(([k, v]) => (
@@ -148,7 +148,7 @@ export default function MistakeListPage() {
           <select
             value={masteryStatus}
             onChange={(e) => updateParams('masteryStatus', e.target.value)}
-            className="px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-sm text-gray-900 dark:text-gray-100 focus:ring-2 focus:ring-primary-500/20 focus:border-primary-500 outline-none"
+            className="select"
           >
             <option value="">全部状态</option>
             {Object.entries(MASTERY_STATUS_MAP).map(([k, v]) => (
@@ -213,7 +213,7 @@ export default function MistakeListPage() {
               <Link to={`/mistakes/${m.id}`} className="flex-1 min-w-0">
                 <div className="flex items-center gap-2 mb-1.5">
                   <span className="text-base">{m.subject?.icon}</span>
-                  <h3 className="font-medium text-gray-900 dark:text-gray-100 truncate">
+                  <h3 className="font-medium text-slate-900 dark:text-slate-100 truncate">
                     {m.title}
                   </h3>
                 </div>
