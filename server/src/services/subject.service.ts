@@ -1,6 +1,4 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { prisma } from "../config/database";
 
 export async function getAll(userId: string) {
   const subjects = await prisma.subject.findMany({

@@ -8,6 +8,7 @@ dotenv.config({ path: path.resolve(__dirname, "../.env") });
 
 import { config } from "./config";
 import { errorHandler } from "./middlewares/errorHandler";
+import { apiLimiter } from "./middlewares/rateLimiter";
 import logger from "./utils/logger";
 
 import authRoutes from "./routes/auth.routes";
@@ -30,6 +31,8 @@ if (!fs.existsSync(uploadDir)) {
   fs.mkdirSync(uploadDir, { recursive: true });
 }
 app.use("/uploads", express.static(uploadDir));
+
+app.use("/api", apiLimiter);
 
 app.use("/api/auth", authRoutes);
 app.use("/api/mistakes", mistakeRoutes);

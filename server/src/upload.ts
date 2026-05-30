@@ -1,6 +1,7 @@
 import multer from "multer";
 import path from "path";
 import crypto from "crypto";
+import fs from "fs";
 
 const storage = multer.diskStorage({
   destination: (_req, _file, cb) => {
@@ -32,8 +33,8 @@ export const avatarUpload = multer({
   storage: multer.diskStorage({
     destination: (_req, _file, cb) => {
       const uploadDir = path.resolve(process.env.UPLOAD_DIR || "./uploads", "avatars");
-      if (!require("fs").existsSync(uploadDir)) {
-        require("fs").mkdirSync(uploadDir, { recursive: true });
+      if (!fs.existsSync(uploadDir)) {
+        fs.mkdirSync(uploadDir, { recursive: true });
       }
       cb(null, uploadDir);
     },

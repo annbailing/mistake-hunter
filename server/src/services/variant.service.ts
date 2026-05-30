@@ -1,7 +1,5 @@
-import { PrismaClient } from "@prisma/client";
 import { aiService } from "../utils/ai";
-
-const prisma = new PrismaClient();
+import { prisma } from "../config/database";
 
 export async function getById(userId: string, id: string) {
   const variant = await prisma.variantQuestion.findFirst({

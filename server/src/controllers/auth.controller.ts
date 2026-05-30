@@ -1,8 +1,6 @@
 import { Response, NextFunction } from "express";
 import { AuthRequest } from "../middlewares/auth";
 import * as authService from "../services/auth.service";
-import path from "path";
-import fs from "fs";
 
 export async function register(req: AuthRequest, res: Response, next: NextFunction) {
   try {
@@ -35,8 +33,9 @@ export async function getMe(req: AuthRequest, res: Response, next: NextFunction)
 
 export async function updateProfile(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const { nickname, avatar_url, grade_level, grade } = req.body;
-    let avatarUrl = avatar_url;
+    const { nickname, grade_level, gradeLevel, grade } = req.body;
+    const gradeLevelFinal = gradeLevel || grade_level;
+    let avatarUrl = req.body.avatar_url || req.body.avatarUrl;
 
     if (req.file) {
       avatarUrl = `/uploads/avatars/${req.file.filename}`;
@@ -45,7 +44,7 @@ export async function updateProfile(req: AuthRequest, res: Response, next: NextF
     const result = await authService.updateProfile(req.user!.id, {
       nickname,
       avatarUrl,
-      gradeLevel: grade_level,
+      gradeLevel: gradeLevelFinal,
       grade,
     });
     res.json({ success: true, data: result });

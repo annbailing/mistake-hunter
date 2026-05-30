@@ -120,7 +120,7 @@ export default function ProfilePage() {
             <div className="w-20 h-20 rounded-full bg-primary-500 flex items-center justify-center text-white text-2xl font-bold shadow-lg overflow-hidden">
               {avatarPreview || user?.avatarUrl ? (
                 <img
-                  src={avatarPreview || user?.avatarUrl}
+                  src={avatarPreview || (user?.avatarUrl ?? undefined)}
                   alt="avatar"
                   className="w-full h-full rounded-full object-cover"
                 />
