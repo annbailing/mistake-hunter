@@ -167,22 +167,23 @@ ${correctAnswer ? `正确答案：${correctAnswer}` : ""}
     content: string,
     count: number = 3
   ): Promise<Array<{ content: string; answer: string; difficulty: number }>> {
-    const formatRules = `答案格式：极简。只写 1-2 句关键步骤（写明方法名如"分部积分法"），然后 \\boxed{最终答案}。不写"解：""首先""然后"等废话，不重复题目。公式用 $...$ 或 $$...$$ 包裹。根号内不含分数。`;
+    const formatRules = `答案格式：极简。只写 1-2 句关键步骤（写明方法名如"分部积分法"），然后 \\boxed{最终答案}。不写"解："等废话。公式只用 $...$（行内）和 $$...$$（块级），严禁用 \\( \\) \\[ \\]。根号内不含分数。`;
 
     const messages: AIMessage[] = [
       {
         role: "system",
         content:
-          "你是一位经验丰富的学科教师。你只输出JSON数组，不要任何其他文字。" + formatRules,
+          "你是一位经验丰富的学科教师。你只输出JSON数组，不要任何其他文字。JSON内的LaTeX反斜杠必须双写转义。" + formatRules,
       },
       {
         role: "user",
         content: `原题：${content}
 
-生成 3 道变体题，必须考察同一知识点但改变题型或问题角度（不能仅改数字）。输出JSON：
+生成 3 道变体题，必须考察同一知识点但改变题型或问题角度（不能仅改数字）。只输出如下JSON数组：
 [
-  {"content": "变体题内容", "answer": "关键步骤+\\boxed{答案}", "difficulty": 3}
+  {"content": "$$...$$ 格式的题目", "answer": "关键步骤+\\boxed{答案}", "difficulty": 3}
 ]
+注意：JSON字符串内所有LaTeX反斜杠必须写成 \\\\（双反斜杠），例如 \\\\frac 而非 \\frac。
 difficulty 1-5，三题难度递增。`,
       },
     ];

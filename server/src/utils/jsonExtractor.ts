@@ -96,15 +96,20 @@ function extractJsonBlock(text: string): string {
 
 /** 修复常见 JSON 格式问题 */
 function repairJson(text: string): string {
-  return (
-    text
-      // LaTeX 命令反斜杠在 JSON 中需要转义（\[ \( \frac \int 等）
-      .replace(/\\([^"\\/bfnrtu])/g, '\\\\$1')
-      // 单引号 → 双引号（仅 key 和 string value）
-      .replace(/'/g, '"')
-      // 末尾多余逗号
-      .replace(/,(\s*[}\]])/g, '$1')
-      // 缺少引号的 key
-      .replace(/([{,]\s*)(\w+)(\s*:)/g, '$1"$2"$3')
-  )
+  let result = text
+  // 核心修复：AI 输出的 LaTeX 命令（\[ \] \frac \int \boxed \sqrt 等）在 JSON 字符串中
+  // 其反斜杠必须转义为 \\。只保留已是合法 JSON 转义的 \\ 和 \" 不动。
+  // 用占位符保护已有的合法转义，修复后还原
+  result = result.replace(/\\\\/g, '\x00').replace(/\\"/g, '\x01')
+  // 剩余所有 \X → \\X
+  result = result.replace(/\\(.)/g, '\\\\$1')
+  // 还原
+  result = result.replace(/\x00/g, '\\\\').replace(/\x01/g, '\\"')
+  // 单引号 → 双引号
+  result = result.replace(/'/g, '"')
+  // 末尾多余逗号
+  result = result.replace(/,(\s*[}\]])/g, '$1')
+  // 缺少引号的 key
+  result = result.replace(/([{,]\s*)(\w+)(\s*:)/g, '$1"$2"$3')
+  return result
 }
