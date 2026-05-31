@@ -10,7 +10,9 @@
     "build": "cd server && npm run build",
     "prisma:generate": "cd server && npm run prisma:generate",
     "prisma:migrate": "cd server && npm run prisma:migrate",
-    "prisma:seed": "cd server && npm run prisma:seed"
+    "prisma:seed": "cd server && npm run prisma:seed",
+    "test": "cd server && npm test",
+    "test:watch": "cd server && npm run test:watch"
   },
   "devDependencies": {
     "concurrently": "^8.2.2"
