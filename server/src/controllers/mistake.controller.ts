@@ -2,9 +2,17 @@ import { Response, NextFunction } from "express";
 import { AuthRequest } from "../middlewares/auth";
 import * as mistakeService from "../services/mistake.service";
 
+/** 将 multer 上传的文件转为 service 需要的格式 */
+function mapUploadedFiles(files: Express.Multer.File[] | undefined) {
+  if (!files || files.length === 0) return undefined;
+  return (files as Express.Multer.File[]).map((f) => ({
+    filePath: `/uploads/${f.filename}`,
+  }));
+}
+
 export async function create(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const data = req.body;
+    const data = { ...req.body, images: mapUploadedFiles(req.files as any) };
     const result = await mistakeService.create(req.user!.id, data);
     res.status(201).json({ success: true, data: result });
   } catch (error) {
@@ -42,7 +50,8 @@ export async function getById(req: AuthRequest, res: Response, next: NextFunctio
 
 export async function update(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const result = await mistakeService.update(req.user!.id, req.params.id, req.body);
+    const data = { ...req.body, images: mapUploadedFiles(req.files as any) };
+    const result = await mistakeService.update(req.user!.id, req.params.id, data);
     res.json({ success: true, data: result });
   } catch (error) {
     next(error);
