@@ -70,7 +70,7 @@ class AIService {
       const userMsgs = messages.filter((m) => m.role !== "system");
       body = JSON.stringify({
         model: this.model,
-        max_tokens: 4096,
+        max_tokens: 16384,
         system: systemMsg?.content || "",
         messages: userMsgs.map((m) => ({
           role: m.role,
@@ -82,7 +82,7 @@ class AIService {
         model: this.model,
         messages,
         temperature: 0.7,
-        max_tokens: 2048,
+        max_tokens: 4096,
       });
     }
 
@@ -110,6 +110,12 @@ class AIService {
       if (this.provider === "claude") {
         // 小米模型返回的 content 数组中，第一个是 thinking 类型，后面才是真正的文本
         const textContent = data.content?.find((item: any) => item.type === "text");
+        if (!textContent?.text) {
+          const thinkingOnly = data.content?.every((item: any) => item.type === "thinking");
+          if (thinkingOnly) {
+            throw new Error("AI 模型思考超时，未生成文本输出。请增加 max_tokens 或简化提示词。");
+          }
+        }
         return textContent?.text || "";
       }
       return data.choices?.[0]?.message?.content || "";
