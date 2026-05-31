@@ -148,9 +148,14 @@ function repairJson(text: string): string {
   result = result.replace(/\x01/g, '\\"')  // 占位符1 → \"
 
   // 第 4 层：其他常见修复
-  // 单引号 → 双引号（仅在 key/value 层面，不处理字符串内容中的单引号）
-  // 这个替换比较激进，只在 JSON 结构层面做
-  result = result.replace(/'/g, '"')
+  // 只替换作为 JSON 结构分隔符的单引号，不碰字符串内容中的撇号（如 f'(x)）
+  // 匹配：{ ' → { "  ,  ' → , "  [ ' → [ "   ' : → " :   : ' → : "   ' } → " }  ' ] → " ]  ' , → " ,
+  result = result
+    .replace(/([\{,\[])\s*'/g, '$1"')   // { 'key'  , 'key'  [ 'val'
+    .replace(/'\s*:/g, '":')             // 'key' :
+    .replace(/:\s*'/g, ': "')            // : 'val'
+    .replace(/'\s*([\},\]])/g, '"$1')    // 'val' }  'val' ]  'val' ,
+
 
   // 末尾多余逗号: ,] 或 ,}
   result = result.replace(/,(\s*[}\]])/g, "$1")

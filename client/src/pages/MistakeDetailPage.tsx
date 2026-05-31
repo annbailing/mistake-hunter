@@ -22,6 +22,7 @@ import { Skeleton } from '../components/ui/Loading'
 import clsx from 'clsx'
 import dayjs from 'dayjs'
 import katex from 'katex'
+import 'katex/dist/katex.min.css'
 
 /** 去掉答案里 AI 习惯性重复的题目内容和前缀 */
 function cleanAnswer(content: string, answer: string): string {
@@ -43,21 +44,48 @@ function cleanAnswer(content: string, answer: string): string {
 
 function renderLatex(text: string): string {
   if (!text) return text
-  return text
-    // 块级公式 $$...$$ 和 \[...\]
-    .replace(/\$\$([^$]+)\$\$/g, (_, f) => {
-      try { return katex.renderToString(f, { displayMode: true, throwOnError: false }) } catch { return f }
-    })
-    .replace(/\\\[([\s\S]*?)\\\]/g, (_, f) => {
-      try { return katex.renderToString(f, { displayMode: true, throwOnError: false }) } catch { return f }
-    })
-    // 行内公式 $...$ 和 \(...\)
-    .replace(/\$([^$]+)\$/g, (_, f) => {
-      try { return katex.renderToString(f, { displayMode: false, throwOnError: false }) } catch { return f }
-    })
-    .replace(/\\\(([\s\S]*?)\\\)/g, (_, f) => {
-      try { return katex.renderToString(f, { displayMode: false, throwOnError: false }) } catch { return f }
-    })
+  let result = text
+    // 把字面量 "\n"（反斜杠+n）转为真正的换行符
+    .replace(/\\n/g, '\n')
+
+  // 保护公式块，避免换行处理破坏 KaTeX 语法
+  const mathBlocks: string[] = []
+  result = result
+    .replace(/\$\$([^$]+)\$\$/g, (m) => { mathBlocks.push(m); return `\x00MATH${mathBlocks.length - 1}\x00` })
+    .replace(/\\\[([\s\S]*?)\\\]/g, (m) => { mathBlocks.push(m); return `\x00MATH${mathBlocks.length - 1}\x00` })
+    .replace(/\$([^$]+)\$/g, (m) => { mathBlocks.push(m); return `\x00MATH${mathBlocks.length - 1}\x00` })
+    .replace(/\\\(([\s\S]*?)\\\)/g, (m) => { mathBlocks.push(m); return `\x00MATH${mathBlocks.length - 1}\x00` })
+
+  // 换行符 → <br/>（仅在文本区域）
+  result = result.replace(/\n/g, '<br/>')
+
+  // 还原公式块并渲染
+  result = result.replace(/\x00MATH(\d+)\x00/g, (_, i) => {
+    const m = mathBlocks[Number(i)]
+    // $$...$$
+    if (m.startsWith('$$')) {
+      const f = m.slice(2, -2)
+      try { return katex.renderToString(f, { displayMode: true, throwOnError: false }) } catch { return m }
+    }
+    // \[...\]
+    if (m.startsWith('\\[')) {
+      const f = m.slice(2, -2)
+      try { return katex.renderToString(f, { displayMode: true, throwOnError: false }) } catch { return m }
+    }
+    // $...$
+    if (m.startsWith('$')) {
+      const f = m.slice(1, -1)
+      try { return katex.renderToString(f, { displayMode: false, throwOnError: false }) } catch { return m }
+    }
+    // \(...\)
+    if (m.startsWith('\\(')) {
+      const f = m.slice(2, -2)
+      try { return katex.renderToString(f, { displayMode: false, throwOnError: false }) } catch { return m }
+    }
+    return m
+  })
+
+  return result
 }
 
 export default function MistakeDetailPage() {
@@ -319,7 +347,7 @@ export default function MistakeDetailPage() {
                 className="content-card !p-4"
               >
                 <p
-                  className="content-text font-medium mb-3"
+                  className="content-text font-medium mb-3 whitespace-pre-wrap"
                   dangerouslySetInnerHTML={{ __html: `${i + 1}. ${renderLatex(v.content)}` }}
                 />
                 <button

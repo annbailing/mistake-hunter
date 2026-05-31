@@ -125,7 +125,7 @@ export default function MistakeListPage() {
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
-              placeholder="搜索错题标题或内容..."
+              placeholder="搜索题目、答案、章节、标签..."
               className="input pl-9"
             />
           </div>

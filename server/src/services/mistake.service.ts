@@ -128,9 +128,23 @@ export async function getList(userId: string, filters: MistakeFilters) {
   }
 
   if (filters.keyword) {
+    const kw = filters.keyword;
     where.OR = [
-      { title: { contains: filters.keyword } },
-      { content: { contains: filters.keyword } },
+      { title: { contains: kw } },
+      { content: { contains: kw } },
+      { myAnswer: { contains: kw } },
+      { correctAnswer: { contains: kw } },
+      { source: { contains: kw } },
+      // 科目名匹配
+      { subject: { name: { contains: kw } } },
+      // 章节名匹配
+      { chapter: { name: { contains: kw } } },
+      // 标签名匹配
+      { mistakeTags: { some: { tag: { name: { contains: kw } } } } },
+      // AI分析内容匹配
+      { aiAnalysis: { analysis: { contains: kw } } },
+      // 图片OCR文本匹配
+      { images: { some: { ocrText: { contains: kw } } } },
     ];
   }
 
@@ -336,11 +350,7 @@ export async function generateVariants(userId: string, id: string) {
     throw Object.assign(new Error("错题不存在"), { statusCode: 404 });
   }
 
-  // 先删除旧的变体题，避免每次生成累积
-  await prisma.variantQuestion.deleteMany({
-    where: { mistakeId: id },
-  });
-
+  // 先生成新题，成功后再替换旧题（避免生成失败导致数据丢失）
   const variants = await aiService.generateVariants(mistake.content);
 
   if (variants.length === 0) {
@@ -350,19 +360,24 @@ export async function generateVariants(userId: string, id: string) {
   // 只保留前3道
   const selected = variants.slice(0, 3);
 
-  const result = await prisma.variantQuestion.createMany({
-    data: selected.map((v, index) => ({
-      mistakeId: id,
-      content: v.content,
-      answer: v.answer,
-      difficulty: v.difficulty,
-      sortOrder: index,
-    })),
-  });
-
-  const created = await prisma.variantQuestion.findMany({
-    where: { mistakeId: id },
-    orderBy: { sortOrder: "asc" },
+  // 在事务内完成 删旧+插新+查回，保证数据一致性
+  const created = await prisma.$transaction(async (tx) => {
+    await tx.variantQuestion.deleteMany({
+      where: { mistakeId: id },
+    });
+    await tx.variantQuestion.createMany({
+      data: selected.map((v, index) => ({
+        mistakeId: id,
+        content: v.content,
+        answer: v.answer,
+        difficulty: v.difficulty,
+        sortOrder: index,
+      })),
+    });
+    return tx.variantQuestion.findMany({
+      where: { mistakeId: id },
+      orderBy: { sortOrder: "asc" },
+    });
   });
 
   return created;

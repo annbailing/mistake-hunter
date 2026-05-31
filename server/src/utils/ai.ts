@@ -108,17 +108,30 @@ class AIService {
       logger.info("AI API response", { data });
 
       if (this.provider === "claude") {
-        // 小米模型返回的 content 数组中，第一个是 thinking 类型，后面才是真正的文本
-        const textContent = data.content?.find((item: any) => item.type === "text");
+        if (!data.content || !Array.isArray(data.content) || data.content.length === 0) {
+          logger.error("AI response: content field missing or empty", { dataKeys: Object.keys(data) });
+          throw new Error("AI 响应格式异常：缺少 content 字段");
+        }
+        const textContent = data.content.find((item: any) => item.type === "text");
         if (!textContent?.text) {
-          const thinkingOnly = data.content?.every((item: any) => item.type === "thinking");
+          const thinkingOnly = data.content.every((item: any) => item.type === "thinking");
           if (thinkingOnly) {
             throw new Error("AI 模型思考超时，未生成文本输出。请增加 max_tokens 或简化提示词。");
           }
+          logger.error("AI response: no text content found", {
+            contentTypes: data.content.map((c: any) => c.type),
+          });
+          throw new Error("AI 响应中未找到文本内容");
         }
-        return textContent?.text || "";
+        return textContent.text;
       }
-      return data.choices?.[0]?.message?.content || "";
+      // OpenAI 兼容格式
+      const content = data.choices?.[0]?.message?.content;
+      if (!content) {
+        logger.error("AI response: no choices/message/content", { dataKeys: Object.keys(data) });
+        throw new Error("AI 响应格式异常：未找到有效内容");
+      }
+      return content;
     } catch (error) {
       logger.error("AI API call exception", { error });
       throw error;
@@ -167,52 +180,30 @@ ${correctAnswer ? `正确答案：${correctAnswer}` : ""}
     content: string,
     count: number = 3
   ): Promise<Array<{ content: string; answer: string; difficulty: number }>> {
+    const knowledgeHint = extractKnowledgeHint(content);
+
     const messages: AIMessage[] = [
       {
         role: "system",
-        content: `你是一位经验丰富的学科教师，擅长编写高质量练习题。请严格遵守以下规则：
+        content: `你是一位经验丰富的学科教师。请生成3道变体练习题，返回JSON数组。
 
-1. 只输出指定格式，不输出任何额外文字、解释或markdown标记
-2. 所有题目和答案必须用纯文本，绝对禁止使用LaTeX公式（如 $$、\\frac、\\sqrt 等）。数学表达式直接用中文描述或简单符号，如"x的平方"、"√2"、"1/2"
-3. 答案直接写最终结果，不要写"解："、"答："等引导词
-4. 答案是给学生直接看的，要简洁明了`,
+规则：
+- 知识点必须和原题完全一致，不能跑偏
+- 数学公式用 $...$ 包裹（行内公式），如 $\\int \\frac{3}{x^3+1}dx$
+- 题目像试卷一样自然，答案只写最终结果，不要"解""答"`,
       },
       {
         role: "user",
         content: `原题：${content}
 
-请以上面这道题为基础，生成3道同类型变体题。要求：
-- 同一知识点，但要变换题型或角度。比如：原题是计算题，变体可以是应用题、判断题、填空题等
-- 每个变体必须与原题有本质区别：改变已知条件和求解目标、增加或减少条件、把正向计算改成反向推导等
-- 不要只改数字，要改变题目结构
-- 难度依次递增（1→3）
+请生成3道同知识点变体题。核心约束：
+- 知识点：【${knowledgeHint}】，不离题
+- 变化方式：改条件、反问、增减信息、变换题型（选择/填空/计算/判断），不能只改数字
+- 数学公式用 $...$ 包裹，如 $x^2$、$\\frac{1}{2}$
+- 难度1→3递增
 
-严格按照以下格式输出，题之间用 --- 分隔：
-
-【题】
-（纯文本题目，禁止LaTeX）
-【答】
-（最终答案，不要写"解""答"等前缀）
-【度】
-（1-5的数字）
-
----
-【题】
-（纯文本题目，禁止LaTeX）
-【答】
-（最终答案，不要写"解""答"等前缀）
-【度】
-（1-5的数字）
-
----
-【题】
-（纯文本题目，禁止LaTeX）
-【答】
-（最终答案，不要写"解""答"等前缀）
-【度】
-（1-5的数字）
-
-只输出以上内容，不要任何额外文字。`,
+直接返回JSON数组（不含markdown标记）：
+[{"content":"题目文本","answer":"最终答案","difficulty":1}, ...]`,
       },
     ];
 
@@ -261,25 +252,97 @@ ${correctAnswer ? `正确答案：${correctAnswer}` : ""}
   }
 }
 
-/** 解析变体题文本，支持多种格式 */
+/** 从原题中提取知识点关键词，用于约束AI不离题 */
+function extractKnowledgeHint(content: string): string {
+  // 去掉LaTeX标记
+  const cleaned = content
+    .replace(/\$\$[\s\S]*?\$\$/g, " ")
+    .replace(/\$[^$]+\$/g, " ")
+    .replace(/\\\[[\s\S]*?\\\]/g, " ")
+    .replace(/\\\([\s\S]*?\\\)/g, " ")
+    .replace(/\\[a-zA-Z]+/g, " ")
+    .replace(/[{}\[\]]/g, " ");
+
+  // 知识点关键词匹配
+  const patterns: Array<{ regex: RegExp; label: string }> = [
+    // 数学
+    { regex: /积分|∫|integral|不定积分|定积分|微积分/, label: "积分" },
+    { regex: /求导|导数|微分|dy\/dx|f'/, label: "求导/微分" },
+    { regex: /极限|lim|limt/, label: "极限" },
+    { regex: /矩阵|行列式|特征值|特征向量/, label: "线性代数-矩阵" },
+    { regex: /概率|期望|方差|标准差|正态分布/, label: "概率统计" },
+    { regex: /三角|sin|cos|tan|cot|正弦|余弦/, label: "三角函数" },
+    { regex: /方程|解.*=|求根|一元二次/, label: "解方程" },
+    { regex: /函数|定义域|值域|单调|奇偶/, label: "函数" },
+    { regex: /数列|等差|等比|通项|求和/, label: "数列" },
+    { regex: /几何|面积|体积|周长|三角形|圆|矩形|梯形/, label: "几何" },
+    { regex: /向量|坐标|数量积|叉乘/, label: "向量" },
+    { regex: /不等式|大于|小于|≥|≤|解集/, label: "不等式" },
+    // 物理
+    { regex: /力|牛顿|加速度|F=|质量|重力|摩擦/, label: "力学" },
+    { regex: /电[路压阻流]|欧姆|电阻|电容|电流|电压/, label: "电学" },
+    { regex: /光|透镜|反射|折射|焦距/, label: "光学" },
+    { regex: /热|温度|热量|比热|热胀/, label: "热学" },
+    // 化学
+    { regex: /化学[反方程]|化合|分解|置换/, label: "化学反应" },
+    { regex: /元素|周期|原子|分子|电子/, label: "化学-原子结构" },
+    { regex: /酸碱|pH|中和|滴定/, label: "化学-酸碱" },
+    { regex: /氧化|还原|氧还/, label: "化学-氧化还原" },
+  ];
+
+  for (const { regex, label } of patterns) {
+    if (regex.test(cleaned)) {
+      return label;
+    }
+  }
+
+  // 没有命中则取前20字作为知识点提示
+  const short = cleaned.trim().replace(/\s+/g, " ").slice(0, 30);
+  return short || "与题目相关";
+}
+
+/** 解析变体题，支持JSON数组和【题】【答】【度】文本两种格式 */
 function parseVariantText(
   raw: string
 ): Array<{ content: string; answer: string; difficulty: number }> {
-  let text = raw.replace(/```[\s\S]*?```/g, "").trim();
+  let text = raw.trim();
+  logger.info("parseVariantText input", { length: text.length, preview: text.slice(0, 300) });
 
-  // 清理AI可能额外输出的引导文字（在第一个【题】之前的内容）
+  // ========== 方式1：JSON 数组格式（用 extractJson 处理 LaTeX 转义）==========
+  try {
+    const parsed = extractJson<any[]>(text);
+    if (Array.isArray(parsed) && parsed.length > 0) {
+      const variants: Array<{ content: string; answer: string; difficulty: number }> = [];
+      for (const item of parsed) {
+        const content = String(item.content || "").trim();
+        if (!content || content.length < 2) continue;
+        let answer = String(item.answer || "").trim();
+        answer = answer
+          .replace(/^(解|答|答案)[：:]\s*/i, "")
+          .replace(/^(题目|原题)[：:]\s*/i, "")
+          .trim();
+        const difficulty = Math.min(5, Math.max(1, parseInt(String(item.difficulty)) || variants.length + 1));
+        variants.push({ content, answer, difficulty });
+      }
+      if (variants.length > 0) {
+        logger.info("parseVariantText: parsed as JSON", { count: variants.length });
+        return variants.slice(0, 3);
+      }
+    }
+  } catch (err: any) {
+    logger.info("parseVariantText: JSON parse failed, trying text format", { error: err.message?.slice(0, 80) });
+  }
+
+  // ========== 方式2：【题】【答】【度】文本格式 ==========
   const firstMarker = text.indexOf("【题】");
   if (firstMarker > 0) {
     text = text.slice(firstMarker);
   }
 
-  // 按 --- 或 ___ 或 *** 分隔各题
   let blocks = text.split(/\n\s*[-_*]{3,}\s*\n/);
-  // 如果没找到分隔符，尝试按 【题】拆分
   if (blocks.length < 2) {
     blocks = text.split(/\n(?=【题】)/);
   }
-  // 如果还是没有，尝试按空行分隔
   if (blocks.length < 2) {
     blocks = text.split(/\n\n+/);
   }
@@ -289,33 +352,31 @@ function parseVariantText(
   for (const block of blocks) {
     if (!block.trim()) continue;
 
-    // 提取题目：【题】之后，到下一个【答】或【度】或块尾
     const contentMatch = block.match(/【题】\s*([\s\S]*?)(?=\n【[答度]】|$)/);
     const content = contentMatch?.[1]?.trim() || "";
-
     if (!content || content.length < 2) continue;
 
-    // 提取答案：【答】之后
     const answerMatch = block.match(/【答】\s*([\s\S]*?)(?=\n【度】|$)/);
     let answer = answerMatch?.[1]?.trim() || "";
-
-    // 清理答案中的引导词
     answer = answer
       .replace(/^(解|答|答案)[：:]\s*/i, "")
-      .replace(/^原式\s*[=＝]\s*/i, "")
       .replace(/^(题目|原题)[：:]\s*/i, "")
       .trim();
 
-    // 提取难度
     const diffMatch = block.match(/【度】\s*(\d+)/);
     const difficulty = diffMatch
       ? Math.min(5, Math.max(1, parseInt(diffMatch[1]) || 3))
-      : variants.length + 1; // 没有标注时默认递增
+      : variants.length + 1;
 
     variants.push({ content, answer, difficulty });
   }
 
-  // 最多3道
+  if (variants.length > 0) {
+    logger.info("parseVariantText: parsed as text format", { count: variants.length });
+  } else {
+    logger.warn("parseVariantText: all formats failed", { preview: raw.slice(0, 400) });
+  }
+
   return variants.slice(0, 3);
 }
 
