@@ -98,6 +98,8 @@ function extractJsonBlock(text: string): string {
 function repairJson(text: string): string {
   return (
     text
+      // LaTeX 命令反斜杠在 JSON 中需要转义（\[ \( \frac \int 等）
+      .replace(/\\([^"\\/bfnrtu])/g, '\\\\$1')
       // 单引号 → 双引号（仅 key 和 string value）
       .replace(/'/g, '"')
       // 末尾多余逗号
