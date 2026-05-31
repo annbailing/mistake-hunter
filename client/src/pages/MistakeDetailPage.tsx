@@ -23,6 +23,24 @@ import clsx from 'clsx'
 import dayjs from 'dayjs'
 import katex from 'katex'
 
+/** 去掉答案里 AI 习惯性重复的题目内容和前缀 */
+function cleanAnswer(content: string, answer: string): string {
+  if (!answer) return answer
+  let cleaned = answer
+  // 去掉 "解：" "答：" "原式 =" 等前缀
+  cleaned = cleaned.replace(/^(解|答|答案)[：:]\s*/i, '')
+  cleaned = cleaned.replace(/^原式\s*[=＝]\s*/i, '')
+  cleaned = cleaned.replace(/^题目[：:]\s*/i, '')
+  // 如果答案开头和题目内容前20个字符相同，裁掉重复部分
+  const contentStart = content.replace(/\s+/g, '').slice(0, 20)
+  const answerStart = cleaned.replace(/\s+/g, '').slice(0, 20)
+  if (contentStart && answerStart && contentStart === answerStart) {
+    cleaned = cleaned.slice(content.replace(/\s+/g, '').length)
+    cleaned = cleaned.replace(/^[=＝]?\s*/, '')
+  }
+  return cleaned.trim()
+}
+
 function renderLatex(text: string): string {
   if (!text) return text
   return text
@@ -323,7 +341,7 @@ export default function MistakeDetailPage() {
                 {showVariants[v.id] && (
                   <div
                     className="mt-3 content-card !p-4 content-text whitespace-pre-wrap"
-                    dangerouslySetInnerHTML={{ __html: renderLatex(v.answer) }}
+                    dangerouslySetInnerHTML={{ __html: renderLatex(cleanAnswer(v.content, v.answer)) }}
                   />
                 )}
               </div>

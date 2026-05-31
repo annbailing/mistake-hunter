@@ -70,7 +70,7 @@ class AIService {
       const userMsgs = messages.filter((m) => m.role !== "system");
       body = JSON.stringify({
         model: this.model,
-        max_tokens: 16384,
+        max_tokens: 32768,
         system: systemMsg?.content || "",
         messages: userMsgs.map((m) => ({
           role: m.role,
@@ -167,27 +167,23 @@ ${correctAnswer ? `正确答案：${correctAnswer}` : ""}
     content: string,
     count: number = 3
   ): Promise<Array<{ content: string; answer: string; difficulty: number }>> {
+    const formatRules = `答案格式：极简。只写 1-2 句关键步骤（写明方法名如"分部积分法"），然后 \\boxed{最终答案}。不写"解：""首先""然后"等废话，不重复题目。公式用 $...$ 或 $$...$$ 包裹。根号内不含分数。`;
+
     const messages: AIMessage[] = [
       {
         role: "system",
         content:
-          "你是一位经验丰富的学科教师，擅长根据原题生成变体练习题。请用中文回答。你只输出JSON数组，不要输出任何其他文字。",
+          "你是一位经验丰富的学科教师。你只输出JSON数组，不要任何其他文字。" + formatRules,
       },
       {
         role: "user",
         content: `原题：${content}
 
-请根据原题生成 ${count} 道变体练习题。直接输出如下JSON数组（不要包含在markdown代码块中，不要加任何解释文字）：
+生成 3 道变体题，必须考察同一知识点但改变题型或问题角度（不能仅改数字）。输出JSON：
 [
-  {
-    "content": "变体题目内容",
-    "answer": "参考答案",
-    "difficulty": 3
-  }
+  {"content": "变体题内容", "answer": "关键步骤+\\boxed{答案}", "difficulty": 3}
 ]
-
-difficulty 为 1-5 的整数，1最简单5最难。变体题考察相同知识点但数据或题型不同，难度应有变化。
-数学公式请用 $...$（行内）或 $$...$$（块级）包裹，以便前端 KaTeX 渲染。`,
+difficulty 1-5，三题难度递增。`,
       },
     ];
 
