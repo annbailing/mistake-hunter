@@ -24,19 +24,22 @@ import dayjs from 'dayjs'
 import katex from 'katex'
 
 function renderLatex(text: string): string {
-  return text.replace(/\$\$([^$]+)\$\$/g, (_, formula) => {
-    try {
-      return katex.renderToString(formula, { displayMode: true, throwOnError: false })
-    } catch {
-      return formula
-    }
-  }).replace(/\$([^$]+)\$/g, (_, formula) => {
-    try {
-      return katex.renderToString(formula, { displayMode: false, throwOnError: false })
-    } catch {
-      return formula
-    }
-  })
+  if (!text) return text
+  return text
+    // 块级公式 $$...$$ 和 \[...\]
+    .replace(/\$\$([^$]+)\$\$/g, (_, f) => {
+      try { return katex.renderToString(f, { displayMode: true, throwOnError: false }) } catch { return f }
+    })
+    .replace(/\\\[([\s\S]*?)\\\]/g, (_, f) => {
+      try { return katex.renderToString(f, { displayMode: true, throwOnError: false }) } catch { return f }
+    })
+    // 行内公式 $...$ 和 \(...\)
+    .replace(/\$([^$]+)\$/g, (_, f) => {
+      try { return katex.renderToString(f, { displayMode: false, throwOnError: false }) } catch { return f }
+    })
+    .replace(/\\\(([\s\S]*?)\\\)/g, (_, f) => {
+      try { return katex.renderToString(f, { displayMode: false, throwOnError: false }) } catch { return f }
+    })
 }
 
 export default function MistakeDetailPage() {
@@ -297,9 +300,10 @@ export default function MistakeDetailPage() {
                 key={v.id}
                 className="content-card !p-4"
               >
-                <p className="content-text font-medium mb-3">
-                  {i + 1}. {v.content}
-                </p>
+                <p
+                  className="content-text font-medium mb-3"
+                  dangerouslySetInnerHTML={{ __html: `${i + 1}. ${renderLatex(v.content)}` }}
+                />
                 <button
                   onClick={() => toggleVariant(v.id)}
                   className="flex items-center gap-1 text-xs text-primary-600 hover:text-primary-700 dark:text-primary-400 font-medium transition-colors"
@@ -317,9 +321,10 @@ export default function MistakeDetailPage() {
                   )}
                 </button>
                 {showVariants[v.id] && (
-                  <div className="mt-3 content-card !p-4 content-text whitespace-pre-wrap">
-                    {v.answer}
-                  </div>
+                  <div
+                    className="mt-3 content-card !p-4 content-text whitespace-pre-wrap"
+                    dangerouslySetInnerHTML={{ __html: renderLatex(v.answer) }}
+                  />
                 )}
               </div>
             ))}
