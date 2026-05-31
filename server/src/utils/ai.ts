@@ -167,57 +167,67 @@ ${correctAnswer ? `正确答案：${correctAnswer}` : ""}
     content: string,
     count: number = 3
   ): Promise<Array<{ content: string; answer: string; difficulty: number }>> {
-    const formatRules = `答案格式：极简。只写 1-2 句关键步骤（写明方法名如"分部积分法"），然后 \\boxed{最终答案}。不写"解："等废话。公式只用 $...$（行内）和 $$...$$（块级），严禁用 \\( \\) \\[ \\]。根号内不含分数。`;
-
     const messages: AIMessage[] = [
       {
         role: "system",
-        content:
-          "你是一位经验丰富的学科教师。你只输出JSON数组，不要任何其他文字。JSON内的LaTeX反斜杠必须双写转义。" + formatRules,
+        content: `你是一位经验丰富的学科教师，擅长编写高质量练习题。请严格遵守以下规则：
+
+1. 只输出指定格式，不输出任何额外文字、解释或markdown标记
+2. 所有题目和答案必须用纯文本，绝对禁止使用LaTeX公式（如 $$、\\frac、\\sqrt 等）。数学表达式直接用中文描述或简单符号，如"x的平方"、"√2"、"1/2"
+3. 答案直接写最终结果，不要写"解："、"答："等引导词
+4. 答案是给学生直接看的，要简洁明了`,
       },
       {
         role: "user",
         content: `原题：${content}
 
-生成 3 道变体题，必须考察同一知识点但改变题型或问题角度（不能仅改数字）。只输出如下JSON数组：
-[
-  {"content": "$$...$$ 格式的题目", "answer": "关键步骤+\\boxed{答案}", "difficulty": 3}
-]
-注意：JSON字符串内所有LaTeX反斜杠必须写成 \\\\（双反斜杠），例如 \\\\frac 而非 \\frac。
-difficulty 1-5，三题难度递增。`,
+请以上面这道题为基础，生成3道同类型变体题。要求：
+- 同一知识点，但要变换题型或角度。比如：原题是计算题，变体可以是应用题、判断题、填空题等
+- 每个变体必须与原题有本质区别：改变已知条件和求解目标、增加或减少条件、把正向计算改成反向推导等
+- 不要只改数字，要改变题目结构
+- 难度依次递增（1→3）
+
+严格按照以下格式输出，题之间用 --- 分隔：
+
+【题】
+（纯文本题目，禁止LaTeX）
+【答】
+（最终答案，不要写"解""答"等前缀）
+【度】
+（1-5的数字）
+
+---
+【题】
+（纯文本题目，禁止LaTeX）
+【答】
+（最终答案，不要写"解""答"等前缀）
+【度】
+（1-5的数字）
+
+---
+【题】
+（纯文本题目，禁止LaTeX）
+【答】
+（最终答案，不要写"解""答"等前缀）
+【度】
+（1-5的数字）
+
+只输出以上内容，不要任何额外文字。`,
       },
     ];
 
     try {
       const result = await this.callAPI(messages);
-      logger.info("generateVariants raw response", { result: result.slice(0, 500) });
+      logger.info("generateVariants raw response", { length: result.length, preview: result.slice(0, 600) });
 
-      const parsed = extractJson<unknown>(result);
-
-      // AI 可能返回数组，也可能包在对象里
-      let items: Array<{ content?: string; answer?: string; difficulty?: number }>;
-      if (Array.isArray(parsed)) {
-        items = parsed;
-      } else if (parsed && typeof parsed === "object") {
-        const obj = parsed as Record<string, unknown>;
-        // 尝试取 variants/questions/items 字段
-        const nested = obj.variants || obj.questions || obj.items || obj.data;
-        if (Array.isArray(nested)) {
-          items = nested as Array<Record<string, unknown>>;
-        } else {
-          logger.error("generateVariants: parsed object has no array field", { keys: Object.keys(obj) });
-          return [];
-        }
-      } else {
-        logger.error("generateVariants: unexpected parsed type", { type: typeof parsed });
+      const variants = parseVariantText(result);
+      if (variants.length === 0) {
+        logger.error("generateVariants: parsed 0 variants", { resultPreview: result.slice(0, 800) });
         return [];
       }
 
-      return items.map((item) => ({
-        content: item.content || "",
-        answer: item.answer || "",
-        difficulty: Math.min(5, Math.max(1, Math.round((item.difficulty as number) || 3))),
-      }));
+      logger.info("generateVariants parsed", { count: variants.length });
+      return variants;
     } catch (err: any) {
       logger.error("generateVariants exception", { message: err.message });
       throw err;
@@ -249,6 +259,64 @@ difficulty 1-5，三题难度递增。`,
     const parsed = extractJson<{ is_correct?: boolean }>(result);
     return !!parsed.is_correct;
   }
+}
+
+/** 解析变体题文本，支持多种格式 */
+function parseVariantText(
+  raw: string
+): Array<{ content: string; answer: string; difficulty: number }> {
+  let text = raw.replace(/```[\s\S]*?```/g, "").trim();
+
+  // 清理AI可能额外输出的引导文字（在第一个【题】之前的内容）
+  const firstMarker = text.indexOf("【题】");
+  if (firstMarker > 0) {
+    text = text.slice(firstMarker);
+  }
+
+  // 按 --- 或 ___ 或 *** 分隔各题
+  let blocks = text.split(/\n\s*[-_*]{3,}\s*\n/);
+  // 如果没找到分隔符，尝试按 【题】拆分
+  if (blocks.length < 2) {
+    blocks = text.split(/\n(?=【题】)/);
+  }
+  // 如果还是没有，尝试按空行分隔
+  if (blocks.length < 2) {
+    blocks = text.split(/\n\n+/);
+  }
+
+  const variants: Array<{ content: string; answer: string; difficulty: number }> = [];
+
+  for (const block of blocks) {
+    if (!block.trim()) continue;
+
+    // 提取题目：【题】之后，到下一个【答】或【度】或块尾
+    const contentMatch = block.match(/【题】\s*([\s\S]*?)(?=\n【[答度]】|$)/);
+    const content = contentMatch?.[1]?.trim() || "";
+
+    if (!content || content.length < 2) continue;
+
+    // 提取答案：【答】之后
+    const answerMatch = block.match(/【答】\s*([\s\S]*?)(?=\n【度】|$)/);
+    let answer = answerMatch?.[1]?.trim() || "";
+
+    // 清理答案中的引导词
+    answer = answer
+      .replace(/^(解|答|答案)[：:]\s*/i, "")
+      .replace(/^原式\s*[=＝]\s*/i, "")
+      .replace(/^(题目|原题)[：:]\s*/i, "")
+      .trim();
+
+    // 提取难度
+    const diffMatch = block.match(/【度】\s*(\d+)/);
+    const difficulty = diffMatch
+      ? Math.min(5, Math.max(1, parseInt(diffMatch[1]) || 3))
+      : variants.length + 1; // 没有标注时默认递增
+
+    variants.push({ content, answer, difficulty });
+  }
+
+  // 最多3道
+  return variants.slice(0, 3);
 }
 
 export const aiService = new AIService();

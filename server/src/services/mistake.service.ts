@@ -336,14 +336,22 @@ export async function generateVariants(userId: string, id: string) {
     throw Object.assign(new Error("错题不存在"), { statusCode: 404 });
   }
 
+  // 先删除旧的变体题，避免每次生成累积
+  await prisma.variantQuestion.deleteMany({
+    where: { mistakeId: id },
+  });
+
   const variants = await aiService.generateVariants(mistake.content);
 
   if (variants.length === 0) {
     throw Object.assign(new Error("变体题生成失败"), { statusCode: 500 });
   }
 
+  // 只保留前3道
+  const selected = variants.slice(0, 3);
+
   const result = await prisma.variantQuestion.createMany({
-    data: variants.map((v, index) => ({
+    data: selected.map((v, index) => ({
       mistakeId: id,
       content: v.content,
       answer: v.answer,
