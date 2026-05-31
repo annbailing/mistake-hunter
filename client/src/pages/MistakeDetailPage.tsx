@@ -71,7 +71,9 @@ export default function MistakeDetailPage() {
       await mistakeApi.analyze(id)
       toast.success('AI分析完成')
       fetchMistake()
-    } catch {
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err?.message || '分析失败'
+      toast.error(`AI分析失败：${msg}`)
     } finally {
       setAnalyzing(false)
     }
@@ -84,7 +86,9 @@ export default function MistakeDetailPage() {
       await mistakeApi.generateVariants(id)
       toast.success('变体题生成完成')
       fetchMistake()
-    } catch {
+    } catch (err: any) {
+      const msg = err?.response?.data?.error || err?.message || '生成失败'
+      toast.error(`变体题生成失败：${msg}`)
     } finally {
       setGenerating(false)
     }

@@ -164,40 +164,59 @@ ${correctAnswer ? `正确答案：${correctAnswer}` : ""}
       {
         role: "system",
         content:
-          "你是一位经验丰富的学科教师，擅长根据原题生成变体练习题。请用中文回答。请严格返回JSON格式，不要包含markdown代码块标记。",
+          "你是一位经验丰富的学科教师，擅长根据原题生成变体练习题。请用中文回答。你只输出JSON数组，不要输出任何其他文字。",
       },
       {
         role: "user",
-        content: `请根据以下题目生成 ${count} 道变体练习题：
+        content: `原题：${content}
 
-原题：${content}
-
-请返回以下JSON格式（数组）：
+请根据原题生成 ${count} 道变体练习题。直接输出如下JSON数组（不要包含在markdown代码块中，不要加任何解释文字）：
 [
   {
     "content": "变体题目内容",
     "answer": "参考答案",
-    "difficulty": "难度等级1-5，其中1最简单5最难"
+    "difficulty": 3
   }
 ]
 
-要求：
-1. 变体题应考察相同的知识点，但题型或数据不同
-2. 难度应有所变化，覆盖不同层次
-3. 题目表述清晰完整`,
+difficulty 为 1-5 的整数，1最简单5最难。变体题考察相同知识点但数据或题型不同，难度应有变化。`,
       },
     ];
 
-    const result = await this.callAPI(messages);
-    const parsed = extractJson<Array<{ content?: string; answer?: string; difficulty?: number }>>(result);
-    if (Array.isArray(parsed)) {
-      return parsed.map((item) => ({
+    try {
+      const result = await this.callAPI(messages);
+      logger.info("generateVariants raw response", { result: result.slice(0, 500) });
+
+      const parsed = extractJson<unknown>(result);
+
+      // AI 可能返回数组，也可能包在对象里
+      let items: Array<{ content?: string; answer?: string; difficulty?: number }>;
+      if (Array.isArray(parsed)) {
+        items = parsed;
+      } else if (parsed && typeof parsed === "object") {
+        const obj = parsed as Record<string, unknown>;
+        // 尝试取 variants/questions/items 字段
+        const nested = obj.variants || obj.questions || obj.items || obj.data;
+        if (Array.isArray(nested)) {
+          items = nested as Array<Record<string, unknown>>;
+        } else {
+          logger.error("generateVariants: parsed object has no array field", { keys: Object.keys(obj) });
+          return [];
+        }
+      } else {
+        logger.error("generateVariants: unexpected parsed type", { type: typeof parsed });
+        return [];
+      }
+
+      return items.map((item) => ({
         content: item.content || "",
         answer: item.answer || "",
-        difficulty: Math.min(5, Math.max(1, Math.round(item.difficulty || 3))),
+        difficulty: Math.min(5, Math.max(1, Math.round((item.difficulty as number) || 3))),
       }));
+    } catch (err: any) {
+      logger.error("generateVariants exception", { message: err.message });
+      throw err;
     }
-    return [];
   }
 
   async judgeAnswer(
