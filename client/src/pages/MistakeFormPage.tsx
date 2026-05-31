@@ -18,13 +18,14 @@ export default function MistakeFormPage() {
   const [myAnswer, setMyAnswer] = useState('')
   const [correctAnswer, setCorrectAnswer] = useState('')
   const [subjectId, setSubjectId] = useState('')
-  const [chapterId, setChapterId] = useState('')
+  const [chapterName, setChapterName] = useState('')
   const [selectedTags, setSelectedTags] = useState<string[]>([])
   const [source, setSource] = useState('')
   const [sourceDate, setSourceDate] = useState('')
   const [images, setImages] = useState<File[]>([])
   const [ocrResult, setOcrResult] = useState('')
   const [ocrLoading, setOcrLoading] = useState(false)
+  const [newTagName, setNewTagName] = useState('')
 
   useEffect(() => {
     subjectApi.getAll().then((r) => setSubjects(r.data.data)).catch(() => {})
@@ -37,7 +38,7 @@ export default function MistakeFormPage() {
         setMyAnswer(m.myAnswer || '')
         setCorrectAnswer(m.correctAnswer || '')
         setSubjectId(m.subject?.id || '')
-        setChapterId(m.chapter?.id || '')
+        setChapterName(m.chapter?.name || '')
         setSelectedTags(m.mistakeTags?.map((t: any) => t.tag.id) || [])
         setSource(m.source || '')
         setSourceDate(m.sourceDate ? m.sourceDate.split('T')[0] : '')
@@ -45,7 +46,18 @@ export default function MistakeFormPage() {
     }
   }, [id])
 
-  const chapters = subjects.find((s) => s.id === subjectId)?.chapters || []
+  // 内联创建新标签
+  const handleCreateTag = async () => {
+    const name = newTagName.trim()
+    if (!name) return
+    try {
+      const res = await tagApi.create({ name })
+      setTags((prev) => [...prev, res.data.data])
+      setSelectedTags((prev) => [...prev, res.data.data.id])
+      setNewTagName('')
+      toast.success('标签已创建')
+    } catch {}
+  }
 
   const handleOCR = async () => {
     if (images.length === 0) return
@@ -71,7 +83,7 @@ export default function MistakeFormPage() {
       form.append('title', title)
       form.append('content', content)
       form.append('subjectId', subjectId)
-      if (chapterId) form.append('chapterId', chapterId)
+      if (chapterName.trim()) form.append('chapterName', chapterName.trim())
       if (myAnswer) form.append('myAnswer', myAnswer)
       if (correctAnswer) form.append('correctAnswer', correctAnswer)
       if (source) form.append('source', source)
@@ -168,7 +180,7 @@ export default function MistakeFormPage() {
           <div className="grid grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium mb-1">📚 科目 *</label>
-              <select value={subjectId} onChange={(e) => { setSubjectId(e.target.value); setChapterId('') }}
+              <select value={subjectId} onChange={(e) => { setSubjectId(e.target.value); setChapterName('') }}
                 className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary-500 outline-none">
                 <option value="">选择科目</option>
                 {subjects.map((s) => <option key={s.id} value={s.id}>{s.icon} {s.name}</option>)}
@@ -176,25 +188,36 @@ export default function MistakeFormPage() {
             </div>
             <div>
               <label className="block text-sm font-medium mb-1">📂 章节</label>
-              <select value={chapterId} onChange={(e) => setChapterId(e.target.value)}
-                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary-500 outline-none">
-                <option value="">选择章节</option>
-                {chapters.map((c: any) => <option key={c.id} value={c.id}>{c.name}</option>)}
-              </select>
+              <input type="text" value={chapterName}
+                onChange={(e) => setChapterName(e.target.value)}
+                placeholder="如：第一章 极限、排序算法、虚拟内存..."
+                className="w-full px-4 py-2.5 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary-500 outline-none" />
             </div>
           </div>
           <div>
-            <label className="block text-sm font-medium mb-1">🏷️ 标签</label>
-            <div className="flex flex-wrap gap-2">
+            <label className="block text-sm font-medium mb-1">🏷️ 标签（点击选择 / 输入新建）</label>
+            <div className="flex flex-wrap gap-2 mb-2">
               {tags.map((t) => (
                 <button key={t.id} type="button"
                   onClick={() => setSelectedTags((s) => s.includes(t.id) ? s.filter((x) => x !== t.id) : [...s, t.id])}
                   className={`px-3 py-1 rounded-full text-xs font-medium transition-colors ${
                     selectedTags.includes(t.id) ? 'bg-primary-600 text-white' : 'bg-gray-200 dark:bg-gray-700'
                   }`}>
+                  {t.color ? <span className="mr-1">{t.color}</span> : null}
                   {t.name}
                 </button>
               ))}
+            </div>
+            <div className="flex gap-2">
+              <input type="text" value={newTagName}
+                onChange={(e) => setNewTagName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleCreateTag())}
+                placeholder="输入新标签名，回车创建"
+                className="flex-1 px-3 py-1.5 text-sm border border-gray-300 dark:border-gray-600 rounded-full bg-white dark:bg-gray-700 focus:ring-2 focus:ring-primary-500 outline-none" />
+              <button type="button" onClick={handleCreateTag}
+                className="px-3 py-1.5 text-xs rounded-full bg-primary-100 text-primary-700 hover:bg-primary-200 dark:bg-primary-900/30 dark:text-primary-300 transition-colors">
+                + 新建
+              </button>
             </div>
           </div>
           <div className="grid grid-cols-2 gap-4">

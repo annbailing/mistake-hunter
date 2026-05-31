@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Search, Plus, Trash2, Filter } from 'lucide-react'
-import { mistakeApi, subjectApi } from '../services/api'
+import { mistakeApi, subjectApi, tagApi } from '../services/api'
 import { ERROR_TYPE_MAP, MASTERY_STATUS_MAP } from '../types'
-import type { Mistake, Subject } from '../types'
+import type { Mistake, Subject, Tag } from '../types'
 import { SkeletonCard } from '../components/ui/Loading'
 import EmptyState from '../components/ui/EmptyState'
 import Pagination from '../components/ui/Pagination'
@@ -16,6 +16,7 @@ export default function MistakeListPage() {
   const [searchParams, setSearchParams] = useSearchParams()
   const [mistakes, setMistakes] = useState<Mistake[]>([])
   const [subjects, setSubjects] = useState<Subject[]>([])
+  const [tags, setTags] = useState<Tag[]>([])
   const [total, setTotal] = useState(0)
   const [totalPages, setTotalPages] = useState(0)
   const [loading, setLoading] = useState(true)
@@ -25,6 +26,7 @@ export default function MistakeListPage() {
   const subjectId = searchParams.get('subjectId') || ''
   const errorType = searchParams.get('errorType') || ''
   const masteryStatus = searchParams.get('masteryStatus') || ''
+  const tagId = searchParams.get('tagId') || ''
   const keyword = searchParams.get('keyword') || ''
   const [searchInput, setSearchInput] = useState(keyword)
   const limit = 12
@@ -36,6 +38,7 @@ export default function MistakeListPage() {
       if (subjectId) params.subjectId = subjectId
       if (errorType) params.errorType = errorType
       if (masteryStatus) params.masteryStatus = masteryStatus
+      if (tagId) params.tagId = tagId
       if (keyword) params.keyword = keyword
       const res = await mistakeApi.getList(params)
       const { items, total: t, totalPages: tp } = unwrapList<Mistake>(res)
@@ -50,7 +53,7 @@ export default function MistakeListPage() {
 
   useEffect(() => {
     fetchMistakes()
-  }, [page, subjectId, errorType, masteryStatus, keyword])
+  }, [page, subjectId, errorType, masteryStatus, tagId, keyword])
 
   useEffect(() => {
     setSearchInput(keyword)
@@ -58,6 +61,7 @@ export default function MistakeListPage() {
 
   useEffect(() => {
     subjectApi.getAll().then((r) => setSubjects(r.data.data || [])).catch(() => {})
+    tagApi.getAll().then((r) => setTags(r.data.data || [])).catch(() => {})
   }, [])
 
   const updateParams = (key: string, value: string) => {
@@ -148,6 +152,19 @@ export default function MistakeListPage() {
             {Object.entries(ERROR_TYPE_MAP).map(([k, v]) => (
               <option key={k} value={k}>
                 {v.label}
+              </option>
+            ))}
+          </select>
+
+          <select
+            value={tagId}
+            onChange={(e) => updateParams('tagId', e.target.value)}
+            className="select"
+          >
+            <option value="">全部标签</option>
+            {tags.map((t) => (
+              <option key={t.id} value={t.id}>
+                🏷️ {t.name}
               </option>
             ))}
           </select>

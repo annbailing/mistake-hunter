@@ -2,6 +2,7 @@ import { Router } from "express";
 import { body } from "express-validator";
 import { authMiddleware } from "../middlewares/auth";
 import { validate } from "../middlewares/validate";
+import { upload } from "../upload";
 import * as mistakeController from "../controllers/mistake.controller";
 
 const router = Router();
@@ -10,6 +11,7 @@ router.use(authMiddleware);
 
 router.post(
   "/",
+  upload.array("images", 5),
   [
     body("subjectId").notEmpty().withMessage("科目ID不能为空"),
     body("title").notEmpty().withMessage("标题不能为空"),
@@ -27,7 +29,7 @@ router.get("/", mistakeController.getList);
 
 router.get("/:id", mistakeController.getById);
 
-router.put("/:id", mistakeController.update);
+router.put("/:id", upload.array("images", 5), mistakeController.update);
 
 router.delete("/:id", mistakeController.remove);
 

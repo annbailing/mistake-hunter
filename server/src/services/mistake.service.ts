@@ -4,6 +4,7 @@ import { prisma } from "../config/database";
 interface CreateMistakeData {
   subjectId: string;
   chapterId?: string;
+  chapterName?: string;
   title: string;
   content: string;
   myAnswer?: string;
@@ -26,16 +27,40 @@ interface MistakeFilters {
   limit?: number;
 }
 
+/** 根据章节名查找或创建章节，返回 chapterId */
+async function resolveChapter(
+  tx: any,
+  subjectId: string,
+  chapterName?: string,
+  chapterId?: string,
+): Promise<string | undefined> {
+  if (chapterId) return chapterId
+  if (!chapterName || !chapterName.trim()) return undefined
+
+  const existing = await tx.chapter.findFirst({
+    where: { subjectId, name: chapterName.trim() },
+  })
+  if (existing) return existing.id
+
+  const created = await tx.chapter.create({
+    data: { subjectId, name: chapterName.trim(), level: 1 },
+  })
+  return created.id
+}
+
 export async function create(userId: string, data: CreateMistakeData) {
   const reviewDate = new Date();
   reviewDate.setDate(reviewDate.getDate() + 1);
 
   const mistake = await prisma.$transaction(async (tx) => {
+    const resolvedChapterId = await resolveChapter(
+      tx, data.subjectId, data.chapterName, data.chapterId,
+    );
     const created = await tx.mistake.create({
       data: {
         userId,
         subjectId: data.subjectId,
-        chapterId: data.chapterId,
+        chapterId: resolvedChapterId,
         title: data.title,
         content: data.content,
         myAnswer: data.myAnswer,
@@ -197,11 +222,15 @@ export async function update(userId: string, id: string, data: Partial<CreateMis
       await tx.mistakeTag.deleteMany({ where: { mistakeId: id } });
     }
 
+    const resolvedChapterId = data.subjectId
+      ? await resolveChapter(tx, data.subjectId, data.chapterName, data.chapterId)
+      : undefined;
+
     const result = await tx.mistake.update({
       where: { id },
       data: {
         subjectId: data.subjectId,
-        chapterId: data.chapterId,
+        chapterId: resolvedChapterId !== undefined ? resolvedChapterId : data.chapterId,
         title: data.title,
         content: data.content,
         myAnswer: data.myAnswer,
