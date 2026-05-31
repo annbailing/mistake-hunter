@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { prisma } from "../config/database";
 
 export async function getSummary(userId: string) {
@@ -71,7 +72,7 @@ export async function getTrend(
     startDate.setMonth(now.getMonth() - 12);
   }
 
-  const where: any = {
+  const where: Prisma.MistakeWhereInput = {
     userId,
     createdAt: { gte: startDate },
   };
@@ -123,7 +124,7 @@ export async function getTrend(
 }
 
 export async function getErrorTypes(userId: string, subjectId?: string) {
-  const where: any = { userId };
+  const where: Prisma.MistakeWhereInput = { userId };
 
   if (subjectId) {
     where.subjectId = subjectId;
@@ -151,7 +152,7 @@ export async function getErrorTypes(userId: string, subjectId?: string) {
 }
 
 export async function getKnowledgeWeakness(userId: string, subjectId?: string) {
-  const where: any = { userId };
+  const where: Prisma.MistakeWhereInput = { userId };
 
   if (subjectId) {
     where.subjectId = subjectId;

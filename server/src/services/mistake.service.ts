@@ -1,3 +1,4 @@
+import { Prisma } from "@prisma/client";
 import { aiService } from "../utils/ai";
 import { prisma } from "../config/database";
 
@@ -29,7 +30,7 @@ interface MistakeFilters {
 
 /** 根据章节名查找或创建章节，返回 chapterId */
 async function resolveChapter(
-  tx: any,
+  tx: Prisma.TransactionClient,
   subjectId: string,
   chapterName?: string,
   chapterId?: string,
@@ -111,7 +112,7 @@ export async function getList(userId: string, filters: MistakeFilters) {
   const limit = filters.limit || 20;
   const skip = (page - 1) * limit;
 
-  const where: any = { userId };
+  const where: Prisma.MistakeWhereInput = { userId };
 
   if (filters.subjectId) {
     where.subjectId = filters.subjectId;
