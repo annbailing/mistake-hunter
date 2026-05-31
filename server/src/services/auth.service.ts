@@ -4,15 +4,13 @@ import { config } from "../config";
 import { prisma } from "../config/database";
 
 const presetSubjects = [
-  { name: "语文", icon: "📖", sortOrder: 1 },
-  { name: "数学", icon: "📐", sortOrder: 2 },
-  { name: "英语", icon: "🔤", sortOrder: 3 },
-  { name: "物理", icon: "⚡", sortOrder: 4 },
-  { name: "化学", icon: "🧪", sortOrder: 5 },
-  { name: "生物", icon: "🧬", sortOrder: 6 },
-  { name: "历史", icon: "📜", sortOrder: 7 },
-  { name: "地理", icon: "🌍", sortOrder: 8 },
-  { name: "政治", icon: "⚖️", sortOrder: 9 },
+  { name: "高等数学", icon: "📐", sortOrder: 1 },
+  { name: "线性代数", icon: "📊", sortOrder: 2 },
+  { name: "概率论", icon: "🎲", sortOrder: 3 },
+  { name: "数据结构", icon: "🌲", sortOrder: 4 },
+  { name: "操作系统", icon: "💻", sortOrder: 5 },
+  { name: "计算机组成原理", icon: "🔧", sortOrder: 6 },
+  { name: "计算机网络", icon: "🌐", sortOrder: 7 },
 ];
 
 function generateToken(userId: string, phone: string, expiresIn: string) {

@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
+import { Link } from 'react-router-dom'
 import { Inbox } from 'lucide-react'
-import Button from './Button'
 
 interface EmptyStateProps {
   icon?: ReactNode
@@ -33,12 +33,15 @@ export default function EmptyState({
         </p>
       )}
       {action && (
-        <Button
-          onClick={action.onClick}
-          to={action.to}
-        >
-          {action.label}
-        </Button>
+        action.to ? (
+          <Link to={action.to} className="btn-primary gap-2">
+            {action.label}
+          </Link>
+        ) : (
+          <button onClick={action.onClick} className="btn-primary gap-2">
+            {action.label}
+          </button>
+        )
       )}
     </div>
   )

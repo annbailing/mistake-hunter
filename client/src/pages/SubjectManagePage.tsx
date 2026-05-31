@@ -79,7 +79,7 @@ export default function SubjectManagePage() {
     })
   }
 
-  const emojiIcons = ['Math', 'Book', 'Globe', 'Flask', 'Music', 'Palette', 'Code', 'Dumbbell', 'Languages', 'Calculator']
+  const emojiIcons = ['📐', '📊', '🎲', '🌲', '💻', '🔧', '🌐', '📚', '🧪', '📝']
 
   if (loading) {
     return (
@@ -134,7 +134,7 @@ export default function SubjectManagePage() {
                       : 'border-gray-200 dark:border-gray-700 hover:border-gray-300 dark:hover:border-gray-600'
                   )}
                 >
-                  {icon === 'Math' ? '📐' : icon === 'Book' ? '📚' : icon === 'Globe' ? '🌍' : icon === 'Flask' ? '🧪' : icon === 'Music' ? '🎵' : icon === 'Palette' ? '🎨' : icon === 'Code' ? '💻' : icon === 'Dumbbell' ? '🏃' : icon === 'Languages' ? '🔤' : '📊'}
+                  {icon}
                 </button>
               ))}
             </div>

@@ -1,4 +1,5 @@
-import { type ReactNode, useEffect, useCallback } from 'react'
+import { useEffect, useCallback } from 'react'
+import type { ReactNode } from 'react'
 import { X } from 'lucide-react'
 import clsx from 'clsx'
 
