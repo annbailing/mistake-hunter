@@ -1,9 +1,9 @@
 import rateLimit from "express-rate-limit";
 
-// 通用 API 限流：15 分钟内最多 100 次请求
+// 通用 API 限流：1 分钟内最多 60 次（正常使用不会触发）
 export const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  max: 100,
+  windowMs: 60 * 1000,
+  max: 60,
   standardHeaders: true,
   legacyHeaders: false,
   message: {

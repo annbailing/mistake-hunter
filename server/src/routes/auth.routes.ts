@@ -11,7 +11,10 @@ router.post(
   "/register",
   [
     body("phone").notEmpty().withMessage("手机号不能为空"),
-    body("password").isLength({ min: 6 }).withMessage("密码至少6位"),
+    body("password")
+      .isLength({ min: 8 }).withMessage("密码至少8位")
+      .matches(/[a-zA-Z]/).withMessage("密码必须包含字母")
+      .matches(/[0-9]/).withMessage("密码必须包含数字"),
     body("nickname").notEmpty().withMessage("昵称不能为空"),
     body("grade_level")
       .isIn(["elementary", "junior", "senior", "university"])
@@ -45,6 +48,20 @@ router.put(
     validate,
   ],
   authController.updateProfile
+);
+
+router.put(
+  "/password",
+  authMiddleware,
+  [
+    body("old_password").notEmpty().withMessage("原密码不能为空"),
+    body("new_password")
+      .isLength({ min: 8 }).withMessage("新密码至少8位")
+      .matches(/[a-zA-Z]/).withMessage("新密码必须包含字母")
+      .matches(/[0-9]/).withMessage("新密码必须包含数字"),
+    validate,
+  ],
+  authController.changePassword
 );
 
 export default router;

@@ -2,6 +2,7 @@ import { Router } from "express";
 import { body } from "express-validator";
 import { authMiddleware } from "../middlewares/auth";
 import { validate } from "../middlewares/validate";
+import { aiLimiter } from "../middlewares/rateLimiter";
 import { upload } from "../upload";
 import * as mistakeController from "../controllers/mistake.controller";
 
@@ -39,9 +40,9 @@ router.post(
   mistakeController.batchRemove
 );
 
-router.post("/:id/analyze", mistakeController.analyze);
+router.post("/:id/analyze", aiLimiter, mistakeController.analyze);
 
-router.post("/:id/variants", mistakeController.generateVariants);
+router.post("/:id/variants", aiLimiter, mistakeController.generateVariants);
 
 router.post("/:id/mark-mastered", mistakeController.markMastered);
 

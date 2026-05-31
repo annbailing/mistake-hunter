@@ -31,6 +31,16 @@ export async function getMe(req: AuthRequest, res: Response, next: NextFunction)
   }
 }
 
+export async function changePassword(req: AuthRequest, res: Response, next: NextFunction) {
+  try {
+    const { old_password, new_password } = req.body;
+    await authService.changePassword(req.user!.id, old_password, new_password);
+    res.json({ success: true, data: null });
+  } catch (error) {
+    next(error);
+  }
+}
+
 export async function updateProfile(req: AuthRequest, res: Response, next: NextFunction) {
   try {
     const { nickname, grade_level, gradeLevel, grade } = req.body;

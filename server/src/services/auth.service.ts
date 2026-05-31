@@ -124,6 +124,28 @@ export async function getProfile(userId: string) {
   return user;
 }
 
+export async function changePassword(
+  userId: string,
+  oldPassword: string,
+  newPassword: string
+) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) {
+    throw Object.assign(new Error("用户不存在"), { statusCode: 404 });
+  }
+
+  const isValid = await bcrypt.compare(oldPassword, user.password);
+  if (!isValid) {
+    throw Object.assign(new Error("原密码错误"), { statusCode: 400 });
+  }
+
+  const hashedPassword = await bcrypt.hash(newPassword, 10);
+  await prisma.user.update({
+    where: { id: userId },
+    data: { password: hashedPassword },
+  });
+}
+
 export async function updateProfile(
   userId: string,
   data: {

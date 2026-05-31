@@ -23,6 +23,7 @@ import clsx from 'clsx'
 import dayjs from 'dayjs'
 import katex from 'katex'
 import 'katex/dist/katex.min.css'
+import DOMPurify from 'dompurify'
 
 /** 去掉答案里 AI 习惯性重复的题目内容和前缀 */
 function cleanAnswer(content: string, answer: string): string {
@@ -85,7 +86,11 @@ function renderLatex(text: string): string {
     return m
   })
 
-  return result
+  // XSS 防护：清洗 HTML，只允许安全标签（KaTeX 的 span + 基本文本标签）
+  return DOMPurify.sanitize(result, {
+    ALLOWED_TAGS: ['span', 'br', 'p', 'strong', 'em', 'sub', 'sup', 'table', 'tr', 'td', 'tbody', 'thead', 'th', 'colgroup', 'col'],
+    ALLOWED_ATTR: ['class', 'style', 'aria-hidden', 'colspan', 'rowspan'],
+  })
 }
 
 export default function MistakeDetailPage() {

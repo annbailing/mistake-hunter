@@ -4,8 +4,9 @@
   "description": "AI驱动的智能错题管理系统",
   "private": true,
   "scripts": {
-    "dev": "concurrently \"npm run dev:server\"",
+    "dev": "concurrently -n server,client -c blue,green \"npm run dev:server\" \"npm run dev:client\"",
     "dev:server": "cd server && npm run dev",
+    "dev:client": "cd client && npm run dev",
     "build": "cd server && npm run build",
     "prisma:generate": "cd server && npm run prisma:generate",
     "prisma:migrate": "cd server && npm run prisma:migrate",
