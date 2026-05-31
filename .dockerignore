@@ -1,0 +1,15 @@
+# Docker 相关
+node_modules/
+dist/
+.git/
+.env
+*.db
+*.db-journal
+uploads/
+.DS_Store
+Thumbs.db
+*.tsbuildinfo
+
+# IDE
+.vscode/
+.idea/

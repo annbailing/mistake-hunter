@@ -11,9 +11,11 @@ export default defineConfig({
   },
   server: {
     port: 5173,
+    // Docker 环境下通过 VITE_API_TARGET=http://server:3001 自动切换
+    // 本地开发不需要设，默认 localhost
     proxy: {
       '/api': {
-        target: 'http://localhost:3001',
+        target: process.env.VITE_API_TARGET || 'http://localhost:3001',
         changeOrigin: true,
         configure: (proxy) => {
           proxy.on('error', (err) => {
@@ -24,7 +26,7 @@ export default defineConfig({
         },
       },
       '/uploads': {
-        target: 'http://localhost:3001',
+        target: process.env.VITE_API_TARGET || 'http://localhost:3001',
         changeOrigin: true,
         configure: (proxy) => {
           proxy.on('error', (err) => {
