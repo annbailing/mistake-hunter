@@ -36,8 +36,8 @@ export default function RegisterPage() {
       toast.error('两次输入的密码不一致')
       return
     }
-    if (password.length < 6) {
-      toast.error('密码长度不能少于6位')
+    if (password.length < 8) {
+      toast.error('密码长度不能少于8位')
       return
     }
     setLoading(true)
@@ -116,9 +116,9 @@ export default function RegisterPage() {
               onChange={(e) => setPassword(e.target.value)}
               onFocus={() => setInputFocused('password')}
               onBlur={() => setInputFocused(null)}
-              placeholder="请输入密码（至少6位）"
+              placeholder="请输入密码（至少8位）"
               required
-              minLength={6}
+              minLength={8}
               className={`bubble-input pr-12 ${
                 inputFocused === 'password' ? 'bubble-input-focused' : ''
               }`}

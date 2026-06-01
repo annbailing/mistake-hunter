@@ -81,8 +81,8 @@ export default function ProfilePage() {
       toast.error('两次输入的新密码不一致')
       return
     }
-    if (newPassword.length < 6) {
-      toast.error('新密码长度不能少于6位')
+    if (newPassword.length < 8) {
+      toast.error('新密码长度不能少于8位')
       return
     }
     setPwLoading(true)
@@ -229,8 +229,8 @@ export default function ProfilePage() {
               type="password"
               value={newPassword}
               onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="请输入新密码（至少6位）"
-              minLength={6}
+              placeholder="请输入新密码（至少8位）"
+              minLength={8}
               className="input"
             />
           </div>

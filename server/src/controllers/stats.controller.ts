@@ -16,7 +16,7 @@ export async function getTrend(req: AuthRequest, res: Response, next: NextFuncti
     const { period, subject_id } = req.query;
     const result = await statsService.getTrend(
       req.user!.id,
-      (period as "week" | "month") || "week",
+      (period as "week" | "month" | "all") || "week",
       subject_id as string
     );
     res.json({ success: true, data: result });

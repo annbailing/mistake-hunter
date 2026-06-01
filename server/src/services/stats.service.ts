@@ -60,7 +60,7 @@ export async function getSummary(userId: string) {
 
 export async function getTrend(
   userId: string,
-  period: "week" | "month" = "week",
+  period: "week" | "month" | "all" = "week",
   subjectId?: string
 ) {
   const now = new Date();
@@ -68,6 +68,8 @@ export async function getTrend(
 
   if (period === "week") {
     startDate.setDate(now.getDate() - 7 * 12);
+  } else if (period === "all") {
+    startDate.setFullYear(2000, 0, 1);
   } else {
     startDate.setMonth(now.getMonth() - 12);
   }

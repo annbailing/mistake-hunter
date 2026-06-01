@@ -35,10 +35,10 @@ export default function MistakeListPage() {
     setLoading(true)
     try {
       const params: Record<string, string | number> = { page, limit }
-      if (subjectId) params.subjectId = subjectId
-      if (errorType) params.errorType = errorType
+      if (subjectId) params.subject_id = subjectId
+      if (errorType) params.error_type = errorType
       if (masteryStatus) params.masteryStatus = masteryStatus
-      if (tagId) params.tagId = tagId
+      if (tagId) params.tag_id = tagId
       if (keyword) params.keyword = keyword
       const res = await mistakeApi.getList(params)
       const { items, total: t, totalPages: tp } = unwrapList<Mistake>(res)

@@ -153,7 +153,7 @@ export default function StatisticsPage() {
                   <Legend />
                   <Line
                     type="monotone"
-                    dataKey="newCount"
+                    dataKey="total"
                     stroke="#3b82f6"
                     name="新增错题"
                     strokeWidth={2}
@@ -162,7 +162,7 @@ export default function StatisticsPage() {
                   />
                   <Line
                     type="monotone"
-                    dataKey="masteredCount"
+                    dataKey="mastered"
                     stroke="#22c55e"
                     name="已掌握"
                     strokeWidth={2}
@@ -270,7 +270,7 @@ export default function StatisticsPage() {
                   <Tooltip contentStyle={tooltipStyle} />
                   <Legend />
                   <Bar
-                    dataKey="newCount"
+                    dataKey="total"
                     fill="#3b82f6"
                     name="新增错题"
                     radius={[4, 4, 0, 0]}
