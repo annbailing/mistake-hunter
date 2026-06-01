@@ -1,6 +1,10 @@
 import { Prisma } from "@prisma/client";
 import { aiService } from "../utils/ai";
 import { prisma } from "../config/database";
+import fs from "fs";
+import path from "path";
+import { config } from "../config";
+import logger from "../utils/logger";
 
 interface CreateMistakeData {
   subjectId: string;
@@ -15,6 +19,7 @@ interface CreateMistakeData {
   errorType?: string;
   tagIds?: string[];
   images?: Array<{ filePath: string; thumbnailPath?: string; ocrText?: string }>;
+  keepImageIds?: string[];
 }
 
 interface MistakeFilters {
@@ -232,9 +237,54 @@ export async function update(userId: string, id: string, data: Partial<CreateMis
     throw Object.assign(new Error("错题不存在"), { statusCode: 404 });
   }
 
+  const filesToDelete: string[] = [];
+
   const updated = await prisma.$transaction(async (tx) => {
     if (data.tagIds) {
       await tx.mistakeTag.deleteMany({ where: { mistakeId: id } });
+    }
+
+    // 1. 处理删除已有的图片（未包含在 keepImageIds 中的）
+    if (data.keepImageIds !== undefined) {
+      const keepIds = data.keepImageIds || [];
+      const imagesToDelete = await tx.mistakeImage.findMany({
+        where: {
+          mistakeId: id,
+          id: { notIn: keepIds },
+        },
+      });
+
+      if (imagesToDelete.length > 0) {
+        await tx.mistakeImage.deleteMany({
+          where: {
+            id: { in: imagesToDelete.map((img) => img.id) },
+          },
+        });
+        
+        // 收集物理文件路径以在事务成功后删除
+        for (const img of imagesToDelete) {
+          const fileName = path.basename(img.filePath);
+          const fullPath = path.resolve(config.upload.dir, fileName);
+          filesToDelete.push(fullPath);
+        }
+      }
+    }
+
+    // 2. 插入新上传的图片
+    if (data.images && data.images.length > 0) {
+      const currentImagesCount = await tx.mistakeImage.count({
+        where: { mistakeId: id },
+      });
+
+      await tx.mistakeImage.createMany({
+        data: data.images.map((img, index) => ({
+          mistakeId: id,
+          filePath: img.filePath,
+          thumbnailPath: img.thumbnailPath,
+          ocrText: img.ocrText,
+          sortOrder: currentImagesCount + index,
+        })),
+      });
     }
 
     const resolvedChapterId = data.subjectId
@@ -269,6 +319,18 @@ export async function update(userId: string, id: string, data: Partial<CreateMis
 
     return result;
   });
+
+  // 3. 事务成功后删除物理文件
+  for (const fullPath of filesToDelete) {
+    try {
+      if (fs.existsSync(fullPath)) {
+        fs.unlinkSync(fullPath);
+        logger.info("Successfully deleted image file from disk after transaction success", { fullPath });
+      }
+    } catch (err) {
+      logger.error("Failed to delete physical image file from disk", { fullPath, err });
+    }
+  }
 
   return updated;
 }

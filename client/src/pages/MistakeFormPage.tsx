@@ -23,6 +23,7 @@ export default function MistakeFormPage() {
   const [source, setSource] = useState('')
   const [sourceDate, setSourceDate] = useState('')
   const [images, setImages] = useState<File[]>([])
+  const [existingImages, setExistingImages] = useState<Array<{ id: string; filePath: string }>>([])
   const [ocrResult, setOcrResult] = useState('')
   const [ocrLoading, setOcrLoading] = useState(false)
   const [newTagName, setNewTagName] = useState('')
@@ -42,6 +43,7 @@ export default function MistakeFormPage() {
         setSelectedTags(m.mistakeTags?.map((t: any) => t.tag.id) || [])
         setSource(m.source || '')
         setSourceDate(m.sourceDate ? m.sourceDate.split('T')[0] : '')
+        setExistingImages(m.images || [])
       }).catch(() => navigate('/mistakes'))
     }
   }, [id])
@@ -90,6 +92,7 @@ export default function MistakeFormPage() {
       if (sourceDate) form.append('sourceDate', sourceDate)
       selectedTags.forEach((t) => form.append('tagIds[]', t))
       images.forEach((img) => form.append('images', img))
+      existingImages.forEach((img) => form.append('keepImageIds[]', img.id))
 
       if (isEdit) {
         await mistakeApi.update(id!, form)
@@ -120,36 +123,101 @@ export default function MistakeFormPage() {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-5">
-        {mode === 'photo' && !isEdit && (
-          <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
-            <h2 className="text-sm font-medium mb-3">📷 拍照录入</h2>
-            <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-8 text-center">
-              <input type="file" accept="image/*" multiple onChange={(e) => setImages(Array.from(e.target.files || []))}
-                className="hidden" id="image-upload" />
-              <label htmlFor="image-upload" className="cursor-pointer">
-                <p className="text-4xl mb-2">📸</p>
-                <p className="text-sm text-gray-500">点击上传或拖拽图片到此处</p>
-                <p className="text-xs text-gray-400 mt-1">支持 JPG/PNG，最多5张</p>
-              </label>
-            </div>
-            {images.length > 0 && (
-              <div className="mt-3 space-y-2">
-                <p className="text-sm text-gray-600">已选 {images.length} 张图片</p>
-                <button type="button" onClick={handleOCR} disabled={ocrLoading}
-                  className="px-4 py-2 bg-primary-600 text-white rounded-lg text-sm disabled:opacity-50">
-                  {ocrLoading ? '识别中...' : '🔍 OCR 识别'}
-                </button>
-                {ocrResult && (
-                  <div className="p-3 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <p className="text-xs text-gray-500 mb-1">识别结果（可编辑）：</p>
-                    <textarea value={ocrResult} onChange={(e) => { setOcrResult(e.target.value); setContent(e.target.value) }}
-                      className="w-full h-32 p-2 text-sm bg-transparent border-0 resize-none focus:outline-none" />
+        {/* 🖼️ 题目图片管理区域（创建与编辑均可见，且支持多图预览/删除） */}
+        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 space-y-4">
+          <h2 className="text-sm font-medium mb-1">🖼️ 题目图片</h2>
+
+          {/* 1. 已有图片展示（仅在编辑模式且有图片时显示） */}
+          {isEdit && existingImages.length > 0 && (
+            <div>
+              <p className="text-xs text-gray-500 dark:text-gray-400 mb-2">已有图片（点击右上角 × 删除）：</p>
+              <div className="flex flex-wrap gap-3">
+                {existingImages.map((img) => (
+                  <div key={img.id} className="relative w-24 h-24 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+                    <img src={img.filePath} alt="已有图片" className="w-full h-full object-cover" />
+                    <button
+                      type="button"
+                      onClick={() => setExistingImages((prev) => prev.filter((x) => x.id !== img.id))}
+                      className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center bg-red-600/80 hover:bg-red-600 text-white rounded-full transition-colors focus:outline-none text-xs font-bold"
+                      title="删除此图"
+                    >
+                      ×
+                    </button>
                   </div>
-                )}
+                ))}
               </div>
-            )}
+            </div>
+          )}
+
+          {/* 2. 新图上传区 */}
+          <div className="border-2 border-dashed border-gray-300 dark:border-gray-600 rounded-xl p-6 text-center bg-gray-50/50 dark:bg-gray-900/10">
+            <input
+              type="file"
+              accept="image/*"
+              multiple
+              onChange={(e) => setImages((prev) => [...prev, ...Array.from(e.target.files || [])])}
+              className="hidden"
+              id="image-upload"
+            />
+            <label htmlFor="image-upload" className="cursor-pointer block">
+              <p className="text-3xl mb-1">📸</p>
+              <p className="text-sm text-gray-500 dark:text-gray-400">点击上传或拖拽图片到此处</p>
+              <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">支持 JPG/PNG，最多可上传 5 张</p>
+            </label>
           </div>
-        )}
+
+          {/* 3. 新选择的图片预览 */}
+          {images.length > 0 && (
+            <div className="space-y-3">
+              <p className="text-xs text-gray-500 dark:text-gray-400">新选图片（点击右上角 × 取消）：</p>
+              <div className="flex flex-wrap gap-3">
+                {images.map((file, idx) => {
+                  const objectUrl = URL.createObjectURL(file);
+                  return (
+                    <div key={idx} className="relative w-24 h-24 rounded-lg overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50">
+                      <img src={objectUrl} alt="新选图片" className="w-full h-full object-cover" />
+                      <button
+                        type="button"
+                        onClick={() => setImages((prev) => prev.filter((_, i) => i !== idx))}
+                        className="absolute top-1 right-1 w-5 h-5 flex items-center justify-center bg-gray-800/80 hover:bg-gray-850 text-white rounded-full transition-colors focus:outline-none text-xs font-bold"
+                        title="移除此图"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* OCR 识别按钮（仅在非编辑模式且开启拍照录入时显示） */}
+              {!isEdit && mode === 'photo' && (
+                <div className="space-y-2 pt-2 border-t border-gray-100 dark:border-gray-700/50">
+                  <button
+                    type="button"
+                    onClick={handleOCR}
+                    disabled={ocrLoading}
+                     className="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm disabled:opacity-50 font-medium transition-colors"
+                  >
+                    {ocrLoading ? '识别中...' : '🔍 OCR 识别第一张图片'}
+                  </button>
+                  {ocrResult && (
+                    <div className="p-3 bg-gray-50 dark:bg-gray-700/40 rounded-lg">
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">OCR 识别结果（已同步至题目内容，可手动微调）：</p>
+                      <textarea
+                        value={ocrResult}
+                        onChange={(e) => {
+                          setOcrResult(e.target.value);
+                          setContent(e.target.value);
+                        }}
+                        className="w-full h-32 p-2 text-sm bg-transparent border-0 resize-none focus:outline-none text-gray-800 dark:text-gray-200"
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
 
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700 space-y-4">
           <div>

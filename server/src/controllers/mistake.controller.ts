@@ -10,9 +10,21 @@ function mapUploadedFiles(files: Express.Multer.File[] | undefined) {
   }));
 }
 
+/** 归一化 FormData 中可能为单值或数组的字段（处理形如 tagIds 或 tagIds[] 键名） */
+function parseArrayField(body: any, fieldName: string): string[] | undefined {
+  const value = body[fieldName] || body[`${fieldName}[]`];
+  if (!value) return undefined;
+  if (Array.isArray(value)) return value.map(String);
+  return [String(value)];
+}
+
 export async function create(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const data = { ...req.body, images: mapUploadedFiles(req.files as any) };
+    const data = {
+      ...req.body,
+      tagIds: parseArrayField(req.body, "tagIds"),
+      images: mapUploadedFiles(req.files as any),
+    };
     const result = await mistakeService.create(req.user!.id, data);
     res.status(201).json({ success: true, data: result });
   } catch (error) {
@@ -50,7 +62,12 @@ export async function getById(req: AuthRequest, res: Response, next: NextFunctio
 
 export async function update(req: AuthRequest, res: Response, next: NextFunction) {
   try {
-    const data = { ...req.body, images: mapUploadedFiles(req.files as any) };
+    const data = {
+      ...req.body,
+      tagIds: parseArrayField(req.body, "tagIds"),
+      keepImageIds: parseArrayField(req.body, "keepImageIds"),
+      images: mapUploadedFiles(req.files as any),
+    };
     const result = await mistakeService.update(req.user!.id, req.params.id, data);
     res.json({ success: true, data: result });
   } catch (error) {

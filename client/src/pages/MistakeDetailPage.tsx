@@ -240,6 +240,20 @@ export default function MistakeDetailPage() {
           className="content-text prose dark:prose-invert max-w-none whitespace-pre-wrap"
           dangerouslySetInnerHTML={{ __html: renderLatex(mistake.content) }}
         />
+        {mistake.images && mistake.images.length > 0 && (
+          <div className="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-4 border-t border-gray-100 dark:border-gray-700/60 pt-4">
+            {mistake.images.map((img) => (
+              <div key={img.id} className="relative group rounded-xl overflow-hidden border border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-900/50 hover:shadow-md transition-shadow">
+                <img
+                  src={img.filePath}
+                  alt="题目图片"
+                  className="w-full h-auto max-h-96 object-contain mx-auto cursor-zoom-in"
+                  onClick={() => window.open(img.filePath, '_blank')}
+                />
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {mistake.myAnswer && (
