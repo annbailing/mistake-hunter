@@ -2,8 +2,6 @@
 import { config } from "../config";
 import logger from "./logger";
 import { extractJson } from "./jsonExtractor";
-import fs from "fs";
-import path from "path";
 
 interface AIMessage {
   role: "system" | "user" | "assistant";
@@ -251,119 +249,6 @@ ${correctAnswer ? `正确答案：${correctAnswer}` : ""}
     const result = await this.callAPI(messages);
     const parsed = extractJson<{ is_correct?: boolean }>(result);
     return !!parsed.is_correct;
-  }
-
-  async ocrImage(imagePath: string): Promise<string> {
-    const resolvedPath = path.resolve(imagePath);
-    if (!fs.existsSync(resolvedPath)) {
-      throw new Error(`图片文件不存在: ${imagePath}`);
-    }
-    const fileBuffer = fs.readFileSync(resolvedPath);
-    const base64Data = fileBuffer.toString("base64");
-
-    const ext = path.extname(imagePath).toLowerCase();
-    let mediaType = "image/jpeg";
-    if (ext === ".png") mediaType = "image/png";
-    else if (ext === ".gif") mediaType = "image/gif";
-    else if (ext === ".webp") mediaType = "image/webp";
-
-    const prompt =
-      "请将图片中的题目内容精准识别并转换为文本。如果题目中包含数学公式、物理/化学符号等，请严格使用 LaTeX 格式进行排版，行内公式用 $...$ 包裹，块级公式用 $$...$$ 包裹。直接输出识别后的题目内容，不要有任何多余的解释、Markdown 代码块标记或引导词。";
-
-    const headers: Record<string, string> = {
-      "Content-Type": "application/json",
-    };
-
-    if (this.provider === "claude") {
-      headers["x-api-key"] = this.apiKey;
-      headers["anthropic-version"] = "2023-06-01";
-    } else {
-      headers["Authorization"] = `Bearer ${this.apiKey}`;
-    }
-
-    let body: string;
-
-    if (this.provider === "claude") {
-      body = JSON.stringify({
-        model: this.model,
-        max_tokens: 2048,
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "image",
-                source: {
-                  type: "base64",
-                  media_type: mediaType,
-                  data: base64Data,
-                },
-              },
-              {
-                type: "text",
-                text: prompt,
-              },
-            ],
-          },
-        ],
-      });
-    } else {
-      body = JSON.stringify({
-        model: this.model,
-        messages: [
-          {
-            role: "user",
-            content: [
-              {
-                type: "text",
-                text: prompt,
-              },
-              {
-                type: "image_url",
-                image_url: {
-                  url: `data:${mediaType};base64,${base64Data}`,
-                },
-              },
-            ],
-          },
-        ],
-        temperature: 0.2,
-        max_tokens: 2048,
-      });
-    }
-
-    const endpoint = this.getEndpoint();
-    logger.info("AI OCR API request", { endpoint, provider: this.provider, model: this.model });
-
-    const response = await fetch(endpoint, {
-      method: "POST",
-      headers,
-      body,
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
-      logger.error("AI OCR API call failed", {
-        status: response.status,
-        error: errorText,
-      });
-      throw new Error(`AI OCR API error: ${response.status}`);
-    }
-
-    const data: any = await response.json();
-    let content = "";
-    if (this.provider === "claude") {
-      const textContent = data.content?.find((item: any) => item.type === "text");
-      content = textContent?.text || "";
-    } else {
-      content = data.choices?.[0]?.message?.content || "";
-    }
-
-    if (!content) {
-      throw new Error("AI OCR 识别返回空内容");
-    }
-
-    return content.trim();
   }
 }
 
