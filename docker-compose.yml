@@ -16,13 +16,12 @@ services:
     volumes:
       # 代码目录挂载 → 修改代码自动热重载
       - ./server/src:/app/src
-      - ./server/prisma:/app/prisma
       # 数据持久化（不随容器删除而丢失）
-      - server-data:/app/prisma
+      - server-data:/app/data
       - uploads-data:/app/uploads
     environment:
       - PORT=3001
-      - DATABASE_URL=file:/app/prisma/dev.db
+      - DATABASE_URL=file:/app/data/dev.db
       - JWT_SECRET=${JWT_SECRET:-change-me-in-production}
       - JWT_EXPIRES_IN=2h
       - JWT_REFRESH_EXPIRES_IN=7d
