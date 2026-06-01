@@ -25,15 +25,21 @@ const app = express();
 // 安全头 (X-Content-Type-Options, X-Frame-Options, CSP 等)
 app.use(helmet());
 
-// CORS 白名单
+// CORS 配置：开发环境放行所有来源，生产环境使用白名单
+const isDev = process.env.NODE_ENV !== "production";
 const allowedOrigins = process.env.CORS_ORIGINS?.split(",") || [
   "http://localhost:5173",
-  "http://127.0.0.1:5173"
+  "http://127.0.0.1:5173",
+  "http://[::1]:5173",
 ];
 app.use(cors({
   origin: (origin, callback) => {
-    // 非浏览器请求 (如 curl) 或无 origin 放行
-    if (!origin || allowedOrigins.includes(origin)) {
+    // 非浏览器请求 (如 curl/Postman) 或无 origin 放行
+    if (!origin) return callback(null, true);
+    // 开发环境：直接放行所有来源
+    if (isDev) return callback(null, true);
+    // 生产环境：严格白名单
+    if (allowedOrigins.includes(origin)) {
       callback(null, true);
     } else {
       callback(new Error("CORS policy: origin not allowed"));
