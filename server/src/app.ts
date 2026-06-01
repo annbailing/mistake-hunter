@@ -26,7 +26,10 @@ const app = express();
 app.use(helmet());
 
 // CORS 白名单
-const allowedOrigins = process.env.CORS_ORIGINS?.split(",") || ["http://localhost:5173"];
+const allowedOrigins = process.env.CORS_ORIGINS?.split(",") || [
+  "http://localhost:5173",
+  "http://127.0.0.1:5173"
+];
 app.use(cors({
   origin: (origin, callback) => {
     // 非浏览器请求 (如 curl) 或无 origin 放行
