@@ -15,6 +15,8 @@ export const config = {
     provider: process.env.AI_PROVIDER || "openai",
     apiKey: process.env.AI_API_KEY || "",
     model: process.env.AI_MODEL || "gpt-4o-mini",
+    // OCR 专用模型（需要支持视觉能力），默认与 model 相同
+    ocrModel: process.env.AI_OCR_MODEL || process.env.AI_MODEL || "gpt-4o-mini",
     baseUrl: process.env.AI_BASE_URL || "",
   },
   upload: {

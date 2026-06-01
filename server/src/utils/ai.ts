@@ -29,12 +29,14 @@ class AIService {
   private provider: string;
   private apiKey: string;
   private model: string;
+  private ocrModel: string; // OCR 专用模型（需支持视觉能力）
   private baseUrl: string;
 
   constructor() {
     this.provider = config.ai.provider;
     this.apiKey = config.ai.apiKey;
     this.model = config.ai.model;
+    this.ocrModel = config.ai.ocrModel;
     if (config.ai.baseUrl) {
       this.baseUrl = config.ai.baseUrl;
     } else {
@@ -223,6 +225,109 @@ ${correctAnswer ? `正确答案：${correctAnswer}` : ""}
       logger.error("generateVariants exception", { message: err.message });
       throw err;
     }
+  }
+
+  /**
+   * 使用 AI 视觉能力识别图片中的文字和数学公式（输出 LaTeX）
+   */
+  async ocrImage(imagePath: string): Promise<string> {
+    const fs = await import("fs");
+    const path = await import("path");
+
+    const imageBuffer = fs.readFileSync(imagePath);
+    const base64Data = imageBuffer.toString("base64");
+    const ext = path.extname(imagePath).toLowerCase().replace(".", "");
+    const mediaType = ext === "png" ? "image/png" : ext === "gif" ? "image/gif" : ext === "webp" ? "image/webp" : "image/jpeg";
+
+    const prompt = `你是专业的数学公式 OCR 引擎。请识别图片中的所有文字和数学公式，严格遵守以下规则：
+
+1. 数学公式用标准 LaTeX 语法表示，行内公式用 $...$，独立公式用 $$...$$
+2. 积分号用 \\int，分数用 \\frac{分子}{分母}，上下标用 ^ 和 _
+3. 常见符号：\\sqrt、\\sum、\\prod、\\lim、\\infty、\\alpha、\\beta、\\theta 等
+4. 只输出识别内容，不要解释、不要注释，不要加任何前缀
+
+示例输出格式：
+- 求 $\\int \\frac{3}{x^2+1} dx$ 的不定积分
+
+请直接输出识别结果：`;
+
+    const headers: Record<string, string> = {
+      "Content-Type": "application/json",
+    };
+
+    let body: string;
+    let endpoint: string;
+
+    if (this.provider === "claude") {
+      headers["x-api-key"] = this.apiKey;
+      headers["anthropic-version"] = "2023-06-01";
+      endpoint = this.baseUrl.endsWith("/v1/messages")
+        ? this.baseUrl
+        : this.baseUrl + "/v1/messages";
+      body = JSON.stringify({
+        model: this.ocrModel,
+        max_tokens: 2048,
+        system: "你是专业的数学 OCR 引擎，能精确识别手写和印刷体数学公式，输出标准 LaTeX。",
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "image",
+                source: {
+                  type: "base64",
+                  media_type: mediaType,
+                  data: base64Data,
+                },
+              },
+              { type: "text", text: prompt },
+            ],
+          },
+        ],
+      });
+    } else {
+      headers["Authorization"] = `Bearer ${this.apiKey}`;
+      endpoint = this.baseUrl.endsWith("/chat/completions")
+        ? this.baseUrl
+        : this.baseUrl + "/v1/chat/completions";
+      body = JSON.stringify({
+        model: this.ocrModel,
+        max_tokens: 2048,
+        messages: [
+          {
+            role: "user",
+            content: [
+              {
+                type: "image_url",
+                image_url: { url: `data:${mediaType};base64,${base64Data}` },
+              },
+              { type: "text", text: prompt },
+            ],
+          },
+        ],
+      });
+    }
+
+    logger.info("AI OCR request", { endpoint, provider: this.provider, model: this.ocrModel, mediaType });
+
+    const response = await fetch(endpoint, { method: "POST", headers, body });
+    if (!response.ok) {
+      const errorText = await response.text();
+      logger.error("AI OCR API call failed", { status: response.status, error: errorText });
+      throw new Error(`AI OCR error: ${response.status}`);
+    }
+
+    const data: any = await response.json();
+    logger.info("AI OCR response received");
+
+    if (this.provider === "claude") {
+      const textContent = data.content?.find((item: any) => item.type === "text");
+      if (!textContent?.text) throw new Error("AI OCR 响应中未找到文本");
+      return textContent.text.trim();
+    }
+    const content = data.choices?.[0]?.message?.content;
+    if (!content) throw new Error("AI OCR 响应格式异常");
+    return content.trim();
   }
 
   async judgeAnswer(
