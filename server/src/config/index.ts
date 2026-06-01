@@ -7,7 +7,7 @@ export const config = {
   port: parseInt(process.env.PORT || "3001", 10),
   databaseUrl: process.env.DATABASE_URL || "",
   jwt: {
-    secret: process.env.JWT_SECRET || "default-secret",
+    secret: process.env.JWT_SECRET || (process.env.NODE_ENV === "production" ? (() => { throw new Error("JWT_SECRET must be set in production") })() : "dev-secret-do-not-use-in-production"),
     expiresIn: process.env.JWT_EXPIRES_IN || "2h",
     refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || "7d",
   },
