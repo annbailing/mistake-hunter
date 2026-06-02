@@ -101,6 +101,8 @@ mistake-hunter/
 | [UI/UX 设计](docs/design/ui-design.md) | Design Token、页面原型、组件树 |
 | [PostgreSQL 迁移](docs/operations/postgresql-migration.md) | 生产环境数据库迁移指南 |
 
-## License
+## 版权声明
 
-MIT
+Copyright © 2026 annbailing. 保留所有权利。
+
+允许学习、研究、修改和非商业用途的使用与分享。**禁止商用**，包括但不限于：将本项目代码用于商业产品、出售或提供付费服务。
