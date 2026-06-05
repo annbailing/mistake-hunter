@@ -91,11 +91,19 @@ class AIService {
     try {
       const endpoint = this.getEndpoint();
       logger.info("AI API request", { endpoint, provider: this.provider, model: this.model });
+
+      // 使用 AbortController 实现超时控制（3分钟）
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 180000);
+
       const response = await fetch(endpoint, {
         method: "POST",
         headers,
         body,
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const errorText = await response.text();
@@ -134,8 +142,12 @@ class AIService {
         throw new Error("AI 响应格式异常：未找到有效内容");
       }
       return content;
-    } catch (error) {
+    } catch (error: any) {
       logger.error("AI API call exception", { error });
+      // 超时错误特殊处理
+      if (error.name === 'AbortError') {
+        throw new Error("AI 请求超时（超过3分钟），题目可能过于复杂。请尝试简化题目或稍后重试。");
+      }
       throw error;
     }
   }
@@ -310,7 +322,12 @@ ${correctAnswer ? `正确答案：${correctAnswer}` : ""}
 
     logger.info("AI OCR request", { endpoint, provider: this.provider, model: this.ocrModel, mediaType });
 
-    const response = await fetch(endpoint, { method: "POST", headers, body });
+    // OCR 也需要超时控制（2分钟）
+    const ocrController = new AbortController();
+    const ocrTimeoutId = setTimeout(() => ocrController.abort(), 120000);
+
+    const response = await fetch(endpoint, { method: "POST", headers, body, signal: ocrController.signal });
+    clearTimeout(ocrTimeoutId);
     if (!response.ok) {
       const errorText = await response.text();
       logger.error("AI OCR API call failed", { status: response.status, error: errorText });
@@ -416,11 +433,15 @@ function parseVariantText(
   // ========== 方式1：JSON 数组格式（用 extractJson 处理 LaTeX 转义）==========
   try {
     const parsed = extractJson<any[]>(text);
+    logger.info("parseVariantText: extractJson result", { isArray: Array.isArray(parsed), length: Array.isArray(parsed) ? parsed.length : 0 });
     if (Array.isArray(parsed) && parsed.length > 0) {
       const variants: Array<{ content: string; answer: string; difficulty: number }> = [];
       for (const item of parsed) {
         const content = String(item.content || "").trim();
-        if (!content || content.length < 2) continue;
+        if (!content || content.length < 1) {
+          logger.info("parseVariantText: skipping empty content item", { item });
+          continue;
+        }
         let answer = String(item.answer || "").trim();
         answer = answer
           .replace(/^(解|答|答案)[：:]\s*/i, "")
@@ -432,6 +453,8 @@ function parseVariantText(
       if (variants.length > 0) {
         logger.info("parseVariantText: parsed as JSON", { count: variants.length });
         return variants.slice(0, 3);
+      } else {
+        logger.info("parseVariantText: JSON parsed but all items filtered out");
       }
     }
   } catch (err: any) {
@@ -459,7 +482,7 @@ function parseVariantText(
 
     const contentMatch = block.match(/【题】\s*([\s\S]*?)(?=\n【[答度]】|$)/);
     const content = contentMatch?.[1]?.trim() || "";
-    if (!content || content.length < 2) continue;
+    if (!content || content.length < 1) continue;
 
     const answerMatch = block.match(/【答】\s*([\s\S]*?)(?=\n【度】|$)/);
     let answer = answerMatch?.[1]?.trim() || "";

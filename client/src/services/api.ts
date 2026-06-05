@@ -4,7 +4,7 @@ import { useAuthStore } from '../stores/authStore'
 
 const api = axios.create({
   baseURL: '/api',
-  timeout: 30000,
+  timeout: 120000, // 2分钟超时，复杂题目需要更多时间
 })
 
 api.interceptors.request.use((config) => {
