@@ -183,19 +183,34 @@ export default function StatisticsPage() {
               错因分布
             </h2>
             {errorTypes.length > 0 ? (
-              <ResponsiveContainer width="100%" height={280}>
+              <ResponsiveContainer width="100%" height={320}>
                 <PieChart>
                   <Pie
                     data={errorTypes}
                     cx="50%"
                     cy="50%"
                     innerRadius={60}
-                    outerRadius={100}
+                    outerRadius={90}
                     dataKey="value"
-                    label={({ name, percent }) =>
-                      `${name} ${(percent * 100).toFixed(0)}%`
-                    }
-                    labelLine={false}
+                    label={({ name, percent, cx, cy, midAngle, outerRadius }) => {
+                      const RADIAN = Math.PI / 180;
+                      const radius = outerRadius + 25;
+                      const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                      const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                      return (
+                        <text
+                          x={x}
+                          y={y}
+                          fill={COLORS[errorTypes.findIndex((d: any) => d.name === name) % COLORS.length]}
+                          textAnchor={x > cx ? 'start' : 'end'}
+                          dominantBaseline="central"
+                          fontSize={13}
+                          fontWeight={500}
+                        >
+                          {`${name} ${(percent * 100).toFixed(0)}%`}
+                        </text>
+                      );
+                    }}
                   >
                     {errorTypes.map((_: any, i: number) => (
                       <Cell key={i} fill={COLORS[i % COLORS.length]} />
@@ -205,7 +220,7 @@ export default function StatisticsPage() {
                 </PieChart>
               </ResponsiveContainer>
             ) : (
-              <div className="flex items-center justify-center h-[280px] text-gray-400 dark:text-gray-500">
+              <div className="flex items-center justify-center h-[320px] text-gray-400 dark:text-gray-500">
                 暂无数据
               </div>
             )}

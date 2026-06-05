@@ -143,19 +143,34 @@ export default function DashboardPage() {
             错因分布
           </h2>
           {errorDist.length > 0 ? (
-            <ResponsiveContainer width="100%" height={260}>
+            <ResponsiveContainer width="100%" height={300}>
               <PieChart>
                 <Pie
                   data={errorDist}
                   cx="50%"
                   cy="50%"
                   innerRadius={60}
-                  outerRadius={100}
+                  outerRadius={90}
                   dataKey="value"
-                  label={({ name, percent }) =>
-                    `${name} ${(percent * 100).toFixed(0)}%`
-                  }
-                  labelLine={false}
+                  label={({ name, percent, cx, cy, midAngle, outerRadius }) => {
+                    const RADIAN = Math.PI / 180;
+                    const radius = outerRadius + 25;
+                    const x = cx + radius * Math.cos(-midAngle * RADIAN);
+                    const y = cy + radius * Math.sin(-midAngle * RADIAN);
+                    return (
+                      <text
+                        x={x}
+                        y={y}
+                        fill={PIE_COLORS[errorDist.findIndex((d: any) => d.name === name) % PIE_COLORS.length]}
+                        textAnchor={x > cx ? 'start' : 'end'}
+                        dominantBaseline="central"
+                        fontSize={13}
+                        fontWeight={500}
+                      >
+                        {`${name} ${(percent * 100).toFixed(0)}%`}
+                      </text>
+                    );
+                  }}
                 >
                   {errorDist.map((_, i) => (
                     <Cell
@@ -174,7 +189,7 @@ export default function DashboardPage() {
               </PieChart>
             </ResponsiveContainer>
           ) : (
-            <div className="flex items-center justify-center h-[260px] text-gray-400 dark:text-gray-500">
+            <div className="flex items-center justify-center h-[300px] text-gray-400 dark:text-gray-500">
               <div className="text-center">
                 <PieChart className="h-12 w-12 mx-auto mb-2 opacity-30" />
                 <p className="text-sm">暂无数据</p>
