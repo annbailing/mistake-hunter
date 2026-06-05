@@ -2,11 +2,28 @@
 import { config } from "../config";
 import logger from "./logger";
 import { extractJson } from "./jsonExtractor";
+import * as math from "mathjs";
 
 interface AIMessage {
   role: "system" | "user" | "assistant";
-  content: string;
+  content: string | Array<{ type: string; [key: string]: any }>;
 }
+
+// 工具定义：计算器
+const CALCULATOR_TOOL = {
+  name: "calculator",
+  description: "执行数学计算，支持基本运算、三角函数、对数、幂运算等。返回计算结果。",
+  input_schema: {
+    type: "object" as const,
+    properties: {
+      expression: {
+        type: "string",
+        description: "数学表达式，如 '2+3*4', 'sqrt(16)', 'sin(pi/4)', 'log(100, 10)'",
+      },
+    },
+    required: ["expression"],
+  },
+};
 
 interface AIResponse {
   error_type?: string;
@@ -53,7 +70,7 @@ class AIService {
     return this.baseUrl;
   }
 
-  private async callAPI(messages: AIMessage[]): Promise<string> {
+  private async callAPI(messages: AIMessage[], tools?: any[]): Promise<string> {
     const headers: Record<string, string> = {
       "Content-Type": "application/json",
     };
@@ -70,7 +87,7 @@ class AIService {
     if (this.provider === "claude") {
       const systemMsg = messages.find((m) => m.role === "system");
       const userMsgs = messages.filter((m) => m.role !== "system");
-      body = JSON.stringify({
+      const requestBody: any = {
         model: this.model,
         max_tokens: 32768,
         system: systemMsg?.content || "",
@@ -78,7 +95,12 @@ class AIService {
           role: m.role,
           content: m.content,
         })),
-      });
+      };
+      // 如果有工具，添加到请求中
+      if (tools && tools.length > 0) {
+        requestBody.tools = tools;
+      }
+      body = JSON.stringify(requestBody);
     } else {
       body = JSON.stringify({
         model: this.model,
@@ -90,7 +112,7 @@ class AIService {
 
     try {
       const endpoint = this.getEndpoint();
-      logger.info("AI API request", { endpoint, provider: this.provider, model: this.model });
+      logger.info("AI API request", { endpoint, provider: this.provider, model: this.model, hasTools: !!tools });
 
       // 使用 AbortController 实现超时控制（3分钟）
       const controller = new AbortController();
@@ -122,6 +144,41 @@ class AIService {
           logger.error("AI response: content field missing or empty", { dataKeys: Object.keys(data) });
           throw new Error("AI 响应格式异常：缺少 content 字段");
         }
+
+        // 处理工具调用
+        if (data.stop_reason === "tool_use" && tools && tools.length > 0) {
+          logger.info("AI requested tool use", {
+            toolUseBlocks: data.content.filter((c: any) => c.type === "tool_use"),
+          });
+
+          // 执行工具调用并继续对话
+          const toolResults: any[] = [];
+          for (const block of data.content) {
+            if (block.type === "tool_use") {
+              const result = await this.executeTool(block.name, block.input);
+              toolResults.push({
+                type: "tool_result",
+                tool_use_id: block.id,
+                content: result,
+              });
+            }
+          }
+
+          logger.info("Tool results prepared", { toolResults });
+
+          // 将工具结果添加到消息中，继续调用 API
+          // 注意：工具结果需要作为 user 角色发送，格式为 content 数组
+          const assistantMessage = { role: "assistant" as const, content: data.content };
+          const toolResultMessage = { role: "user" as const, content: toolResults };
+
+          logger.info("Continuing conversation with tool results", {
+            messageCount: messages.length + 2,
+            toolResultContent: toolResults,
+          });
+
+          return this.callAPI([...messages, assistantMessage, toolResultMessage], tools);
+        }
+
         const textContent = data.content.find((item: any) => item.type === "text");
         if (!textContent?.text) {
           const thinkingOnly = data.content.every((item: any) => item.type === "thinking");
@@ -150,6 +207,27 @@ class AIService {
       }
       throw error;
     }
+  }
+
+  /**
+   * 执行工具调用
+   */
+  private async executeTool(name: string, input: any): Promise<string> {
+    logger.info("Executing tool", { name, input });
+
+    if (name === "calculator") {
+      try {
+        const result = math.evaluate(input.expression);
+        logger.info("Calculator result", { expression: input.expression, result });
+        return String(result);
+      } catch (err: any) {
+        const errorMsg = `计算错误: ${err.message}`;
+        logger.error("Calculator error", { expression: input.expression, error: err.message });
+        return errorMsg;
+      }
+    }
+
+    return `未知工具: ${name}`;
   }
 
   async analyzeError(
@@ -204,7 +282,8 @@ ${correctAnswer ? `正确答案：${correctAnswer}` : ""}
 规则：
 - 知识点必须和原题完全一致，不能跑偏
 - 数学公式用 $...$ 包裹（行内公式），如 $\\int \\frac{3}{x^3+1}dx$
-- 题目像试卷一样自然，答案只写最终结果，不要"解""答"`,
+- 题目像试卷一样自然，答案只写最终结果，不要"解""答"
+- 如果需要计算，使用计算器工具获取精确结果，不要自己推导`,
       },
       {
         role: "user",
@@ -215,6 +294,7 @@ ${correctAnswer ? `正确答案：${correctAnswer}` : ""}
 - 变化方式：改条件、反问、增减信息、变换题型（选择/填空/计算/判断），不能只改数字
 - 数学公式用 $...$ 包裹，如 $x^2$、$\\frac{1}{2}$
 - 难度1→3递增
+- 如果需要计算（如计算积分、求导结果、解方程等），请使用计算器工具
 
 直接返回JSON数组（不含markdown标记）：
 [{"content":"题目文本","answer":"最终答案","difficulty":1}, ...]`,
@@ -222,8 +302,15 @@ ${correctAnswer ? `正确答案：${correctAnswer}` : ""}
     ];
 
     try {
-      const result = await this.callAPI(messages);
+      // 使用工具调用，让 AI 可以使用计算器
+      logger.info("generateVariants: starting API call with tools");
+      const result = await this.callAPI(messages, [CALCULATOR_TOOL]);
       logger.info("generateVariants raw response", { length: result.length, preview: result.slice(0, 600) });
+
+      if (!result || result.length === 0) {
+        logger.error("generateVariants: empty response from API");
+        return [];
+      }
 
       const variants = parseVariantText(result);
       if (variants.length === 0) {
@@ -234,7 +321,7 @@ ${correctAnswer ? `正确答案：${correctAnswer}` : ""}
       logger.info("generateVariants parsed", { count: variants.length });
       return variants;
     } catch (err: any) {
-      logger.error("generateVariants exception", { message: err.message });
+      logger.error("generateVariants exception", { message: err.message, stack: err.stack });
       throw err;
     }
   }
