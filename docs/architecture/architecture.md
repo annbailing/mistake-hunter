@@ -31,8 +31,9 @@ graph TB
     end
 
     subgraph AI["AI 集成层"]
-        LLM["大语言模型抽象层<br/>OpenAI / Claude / 通义千问"]
-        OCR["OCR 服务<br/>Tesseract.js"]
+        LLM["大语言模型抽象层<br/>OpenAI / Claude / 智谱"]
+        OCR["AI Vision OCR<br/>多模型支持"]
+        TOOL["Tool Use 工具调用<br/>计算器加速"]
     end
 
     subgraph DataLayer["数据层"]
@@ -83,7 +84,7 @@ graph TB
 | 缓存 | Redis 7 | 会话管理、热点数据缓存、任务队列 |
 | ORM | Prisma | 类型安全的数据库访问、自动迁移 |
 | 认证 | JWT + bcrypt | 无状态认证 + 安全密码存储 |
-| OCR | Tesseract.js | 免费、本地运行、隐私安全 |
+| OCR | AI Vision | 多模型支持、高精度识别 |
 | AI 模型 | 可插拔抽象层 | 支持 OpenAI / Claude / 国产模型切换 |
 | 文件上传 | Multer + 本地存储 | V1 简单方案，后续可迁移 OSS |
 | 测试 | Vitest + Supertest | 单元测试 + API 集成测试 |
@@ -121,7 +122,7 @@ mistake-hunter/
 │   │   ├── routes/               # 路由定义
 │   │   ├── prisma/               # Prisma schema + migrations
 │   │   ├── config/               # 配置文件
-│   │   └── utils/                # 工具函数（AI, OCR, logger）
+│   │   └── utils/                # 工具函数（AI, OCR, logger, jsonExtractor）
 │   ├── uploads/                  # 上传文件存储目录
 │   └── tests/                    # 后端测试
 ├── docs/                         # 项目文档
