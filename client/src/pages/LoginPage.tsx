@@ -35,7 +35,7 @@ export default function LoginPage() {
       toast.success('登录成功')
       navigate('/')
     } catch {
-      toast.error('登录失败，请检查手机号和密码')
+      // 错误已由 api 拦截器统一处理，此处无需重复提示
     } finally {
       setLoading(false)
     }

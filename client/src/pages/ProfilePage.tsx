@@ -85,6 +85,14 @@ export default function ProfilePage() {
       toast.error('新密码长度不能少于8位')
       return
     }
+    if (!/[a-zA-Z]/.test(newPassword)) {
+      toast.error('新密码必须包含字母')
+      return
+    }
+    if (!/[0-9]/.test(newPassword)) {
+      toast.error('新密码必须包含数字')
+      return
+    }
     setPwLoading(true)
     try {
       await authApi.changePassword({

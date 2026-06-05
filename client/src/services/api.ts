@@ -22,7 +22,8 @@ api.interceptors.response.use(
       useAuthStore.getState().logout()
       window.location.href = '/login'
     }
-    const msg = err.response?.data?.error || err.response?.data?.message || '请求失败'
+    // 优先显示校验详情中的具体错误，再显示通用错误
+    const msg = err.response?.data?.details?.[0]?.message || err.response?.data?.error || err.response?.data?.message || '请求失败'
     toast.error(msg)
     return Promise.reject(err)
   }

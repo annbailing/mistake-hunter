@@ -40,6 +40,14 @@ export default function RegisterPage() {
       toast.error('密码长度不能少于8位')
       return
     }
+    if (!/[a-zA-Z]/.test(password)) {
+      toast.error('密码必须包含字母')
+      return
+    }
+    if (!/[0-9]/.test(password)) {
+      toast.error('密码必须包含数字')
+      return
+    }
     setLoading(true)
     try {
       const res = await authApi.register({
@@ -53,7 +61,7 @@ export default function RegisterPage() {
       toast.success('注册成功')
       navigate('/')
     } catch {
-      toast.error('注册失败，请稍后重试')
+      // 错误已由 api 拦截器统一处理，此处无需重复提示
     } finally {
       setLoading(false)
     }
